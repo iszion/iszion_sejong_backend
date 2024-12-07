@@ -1,0 +1,1420 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.iszion.api.mkt.dao.MktDAO">
+
+    <!-- ###  Help 불러오기 list    ################################ -->
+    <select id="help_project_list" resultType="java.util.HashMap">
+        SELECT
+          p.PROJECT_CD		as	projectCd
+        , p.PROJECT_NM		as	projectNm
+        , IFNULL(o.ORD_CNT,0)		as	ordCnt
+        , p.MAKE_DAY		as	makeDay
+        , p.ORDER_DAY		as	orderDay
+        , p.OUT_DAY		    as	outDay
+        , p.SALES_CD		as	salesCd
+        , ms.SALES_NM		as	salesNm
+        , p.ORCU1_CD		as	orcu1Cd
+        , p.ORCU1_NM		as	orcu1Nm
+        , p.LEVEL_CD		as	levelCd
+        , c1.COMM_NM		as	levelNm
+        , p.TYPE_CD		    as	typeCd
+        , c2.COMM_NM		as	typeNm
+        , p.CONS_CD		    as	consCd
+        , c3.COMM_NM		as	consNm
+        , p.ZONE_CD		    as	zoneCd
+        , c4.COMM_NM		as	zoneNm
+        , p.STEP_CD		    as	stepCd
+        , c5.COMM_NM		as	stepNm
+        , p.EXPLAINS		as	explains
+
+        FROM KPROJTB p
+        -- 계약정보
+        left join (
+        SELECT PROJECT_CD, COUNT(*) as ORD_CNT FROM KODERTB GROUP BY PROJECT_CD
+        ) o ON o.PROJECT_CD = p.PROJECT_CD
+        -- 영업담당
+        left join MSALESTB as ms ON ms.SALES_CD = p.SALES_CD
+        -- 프로젝트중요도
+        left join MCOMMTB as c1 ON c1.COMM_CD = p.LEVEL_CD
+        -- 발주유형
+        left join MCOMMTB as c2 ON c2.COMM_CD = p.TYPE_CD
+        -- 공사구분
+        left join MCOMMTB as c3 ON c3.COMM_CD = p.CONS_CD
+        -- 지역군분류
+        left join MCOMMTB as c4 ON c4.COMM_CD = p.ZONE_CD
+        -- 진행상태구분.
+        left join MCOMMTB as c5 ON c5.COMM_CD = p.STEP_CD
+
+        WHERE 1=1
+        <if test='paramAll == "Y"'>
+            AND p.OUT_DAY <![CDATA[ < ]]> #{paramCloseDay }
+        </if>
+        <if test='paramAll == "N"'>
+            AND p.OUT_DAY <![CDATA[ >= ]]> #{paramCloseDay }
+        </if>
+        <if test='paramValueNm != null and paramValueNm != ""'>
+            AND (   p.PROJECT_NM LIKE CONCAT( '%', #{paramValueNm }, '%' )
+                OR  p.PROJECT_CD LIKE CONCAT( '%', #{paramValueNm }, '%')
+                )
+        </if>
+
+    </select>
+
+    <select id="help_orcu_list" resultType="java.util.HashMap">
+        SELECT
+              o.ORCU_CD 		as	orcuCd
+            , o.ORCU_NM		    as	orcuNm
+            , o.ORCU_NM_X       as	orcuNmX
+            , o.ORCU_FG		    as	orcuFg
+            , o.SALES_CD		as	salesCd
+            , s.SALES_NM	    as	salesNm
+            , o.MAKE_DAY		as	makeDay
+            , o.USE_YN  		as	useYn
+
+        FROM KORCUTB o
+            -- 영업담당
+            left join MSALESTB as s ON s.SALES_CD = o.SALES_CD
+        WHERE 1=1
+            AND o.USE_YN = #{paramAll }
+        <if test='paramValueNm != null and paramValueNm != ""'>
+            AND (   o.ORCU_NM LIKE CONCAT( '%', #{paramValueNm }, '%' )
+                OR  o.ORCU_CD LIKE CONCAT( '%', #{paramValueNm }, '%')
+                )
+        </if>
+
+    </select>
+
+    <!-- ###  발주서정보 불러오기 list    ################################ -->
+    <select id="mkt1010_maxPages" resultType="java.util.HashMap">
+        SELECT
+                count(*)  as maxPages
+        FROM KORCUTB  ko
+        WHERE 1 = 1
+        <if test='paramOrcuFg != null and paramOrcuFg != ""'>
+            AND ko.ORCU_FG = ${paramOrcuFg }
+        </if>
+        <if test='paramSalesCd != null and paramSalesCd != ""'>
+            AND ko.SALES_CD = ${paramSalesCd }
+        </if>
+        <if test='paramSearchValue != null and paramSearchValue != ""'>
+            AND ( ko.ORCU_NM LIKE CONCAT( '%', #{paramSearchValue }, '%' )
+                  OR ko.ORCU_NM_X LIKE CONCAT( '%', #{paramSearchValue }, '%' )
+                )
+        </if>
+
+    </select>
+
+    <select id="mkt1010_list" resultType="java.util.HashMap">
+        SELECT
+              ROW_NUMBER() OVER (ORDER BY ko.MAKE_DAY desc) as rowNum
+            , ko.ORCU_CD	            as	orcuCd
+            , ko.ORCU_FG		        as	orcuFg
+            , ko.ORCU_NM		        as	orcuNm
+            , ko.ORCU_NM_X		        as	orcuNmX
+            , ko.SALES_CD		        as	salesCd
+            , ms.SALES_NM               as  salesNm
+            , ko.MAKE_DAY		        as	makeDay
+            , ko.ZIP_CD 				as	zipCd
+            , ko.ADDR_B 		        as	addrB
+            , ko.ADDR_D 		        as	addrD
+            , ko.REGION   		        as	region
+            , ko.URL    		        as	url
+            , ko.EMAIL    		        as	email
+            , ko.TEL    		        as	tel
+            , ko.EXPLAINS    		    as	explains
+            , ko.USE_YN     		    as	useYn
+            , ko.REG_DATE     		    as	redDate
+            , ko.REG_ID     		    as	redId
+            , ko.UPDATE_DATE   		    as	updateDate
+            , ko.UPDATE_ID     		    as	updateId
+
+            , 'U'                       as  iuD
+
+        FROM KORCUTB  ko
+                 left join MSALESTB ms ON ms.SALES_CD = ko.SALES_CD
+
+        WHERE 1 = 1
+        <if test='paramOrcuFg != null and paramOrcuFg != ""'>
+            AND ko.ORCU_FG = ${paramOrcuFg }
+        </if>
+        <if test='paramSalesCd != null and paramSalesCd != ""'>
+            AND ko.SALES_CD = ${paramSalesCd }
+        </if>
+        <if test='paramSearchValue != null and paramSearchValue != ""'>
+            AND (
+                LOWER(ko.ORCU_NM) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
+                OR
+                LOWER(ko.ORCU_NM_X) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
+
+                )
+        </if>
+        ORDER BY ko.MAKE_DAY desc
+        LIMIT #{paramPageRows} OFFSET #{paramStartRowNum }
+    </select>
+
+    <select id="mkt1010_select" resultType="java.util.HashMap">
+        SELECT
+              ko.ORCU_CD	            as	orcuCd
+            , ko.ORCU_CD	            as	oldOrcuCd
+            , ko.ORCU_FG		        as	orcuFg
+            , ko.ORCU_NM		        as	orcuNm
+            , ko.ORCU_NM_X		        as	orcuNmX
+            , ko.SALES_CD		        as	salesCd
+            , ms.SALES_NM               as  salesNm
+            , ko.MAKE_DAY		        as	makeDay
+            , ko.ZIP_CD 				as	zipCd
+            , ko.ADDR_B 		        as	addrB
+            , ko.ADDR_D 		        as	addrD
+            , ko.REGION   		        as	region
+            , ko.URL    		        as	url
+            , ko.EMAIL    		        as	email
+            , ko.TEL    		        as	tel
+            , ko.EXPLAINS    		    as	explains
+            , ko.USE_YN     		    as	useYn
+            , ko.REG_DATE     		    as	redDate
+            , ko.REG_ID     		    as	redId
+            , ko.UPDATE_DATE   		    as	updateDate
+            , ko.UPDATE_ID     		    as	updateId
+
+            , 'U'                       as  iuD
+
+        FROM KORCUTB  ko
+            left join MSALESTB ms ON ms.SALES_CD = ko.SALES_CD
+        WHERE ko.ORCU_CD 	= 	#{paramOrcuCd}
+
+    </select>
+
+    <insert id="mkt1010_insert" parameterType="java.util.Map" useGeneratedKeys="true" keyProperty="orcuCd">
+        <selectKey keyProperty="orcuCd" resultType="String" order="BEFORE">
+            select ifnull((cast(max(substr(ORCU_CD,1,6)) as unsigned) + 1), '100001')  from KORCUTB
+        </selectKey>
+        <foreach collection="list1" item="item" separator=";">
+            INSERT INTO KORCUTB
+                (
+                      ORCU_CD
+                    , ORCU_FG
+                    , ORCU_NM
+                    , ORCU_NM_X
+                    , SALES_CD
+                    , MAKE_DAY
+                    , ZIP_CD
+                    , ADDR_B
+                    , ADDR_D
+                    , REGION
+                    , URL
+                    , EMAIL
+                    , TEL
+                    , EXPLAINS
+                    , USE_YN
+                    , REG_DATE
+                    , REG_ID
+                    , UPDATE_DATE
+                    , UPDATE_ID
+                ) VALUES (
+                      #{orcuCd}
+                    , #{item.orcuFg}
+                    , #{item.orcuNm}
+                    , #{item.orcuNmX}
+                    , #{item.salesCd}
+                    , #{item.makeDay}
+                    , #{item.zipCd}
+                    , #{item.addrB}
+                    , #{item.addrD}
+                    , #{item.region}
+                    , #{item.url}
+                    , #{item.email}
+                    , #{item.tel}
+                    , #{item.explains}
+                    , #{item.useYn}
+                    , NOW()
+                    , #{userId}
+                    , NOW()
+                    , #{userId}
+                )
+        </foreach>
+    </insert>
+
+    <update id="mkt1010_update" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            UPDATE KORCUTB
+                SET
+                      ORCU_FG       =   #{item.orcuFg}
+                    , ORCU_NM	    =   #{item.orcuNm}
+                    , ORCU_NM_X	    =   #{item.orcuNmX}
+                    , SALES_CD	    =   #{item.salesCd}
+                    , MAKE_DAY      =   #{item.makeDay}
+                    , ZIP_CD 	    =   #{item.zipCd}
+                    , ADDR_B 	    =   #{item.addrB}
+                    , ADDR_D 	    =   #{item.addrD}
+                    , REGION   	    =   #{item.region}
+                    , URL    	    =   #{item.url}
+                    , EMAIL    	    =   #{item.email}
+                    , TEL    	    =   #{item.tel}
+                    , EXPLAINS      =   #{item.explains}
+                    , USE_YN        =   #{item.useYn}
+                    , UPDATE_DATE   =   NOW()
+                    , UPDATE_ID     =   #{userId}
+
+                WHERE ORCU_CD       =   #{item.orcuCd}
+        </foreach>
+    </update>
+
+    <delete id="mkt1010_delete" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            DELETE FROM KORCUTB
+                    WHERE ORCU_CD     	=   #{item.orcuCd }
+        </foreach>
+    </delete>
+
+    <!-- ###  업체담당정보 불러오기 list    ################################ -->
+    <select id="mkt1020_maxPages" resultType="java.util.HashMap">
+        SELECT
+                count(*)  as maxPages
+        FROM KNACDTB  kn
+        WHERE 1 = 1
+        <if test='paramSalesCd != null and paramSalesCd != ""'>
+            AND kn.SALES_CD = ${paramSalesCd }
+        </if>
+        <if test='paramSearchValue != null and paramSearchValue != ""'>
+            AND (
+                LOWER(kn.NACD_NM) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
+                OR
+                LOWER(kn.ORCU_NM) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
+                OR
+                LOWER(kn.DEPT_NM) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
+                OR
+                LOWER(kn.MOBILE) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
+                OR
+                LOWER(kn.TEL) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
+                OR
+                LOWER(kn.EMAIL) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
+            )
+        </if>
+
+    </select>
+
+    <select id="mkt1020_list" resultType="java.util.HashMap">
+        SELECT
+              ROW_NUMBER() OVER (ORDER BY kn.MAKE_DAY desc) as rowNum
+            , kn.NACD_CD	            as	nacdCd
+            , kn.NACD_NM		        as	nacdNm
+            , kn.SALES_CD		        as	salesCd
+            , ms.SALES_NM               as  salesNm
+            , kn.ORCU_CD                as  orcuCd
+            , kn.ORCU_NM                as  orcuNm
+            , kn.DEPT_NM                as  orcuNm
+            , kn.TITL_NM                as  orcuNm
+            , kn.MAKE_DAY		        as	makeDay
+            , kn.MOBILE    		        as	mobile
+            , kn.TEL       		        as	tel
+            , kn.FAX       		        as	fax
+            , kn.EMAIL     		        as	email
+            , kn.ZIP_CD_H 				as	zipCdH
+            , kn.ADDR_HB 		        as	addrHB
+            , kn.ADDR_HD 		        as	addrHD
+            , kn.ZIP_CD_O 				as	zipCdO
+            , kn.ADDR_OB 		        as	addrOB
+            , kn.ADDR_OD 		        as	addrOD
+            , kn.EXPLAINS    		    as	explains
+            , kn.USE_YN     		    as	useYn
+            , kn.REG_DATE     		    as	redDate
+            , kn.REG_ID     		    as	redId
+            , kn.UPDATE_DATE   		    as	updateDate
+            , kn.UPDATE_ID     		    as	updateId
+
+            , 'U'                       as  iuD
+
+        FROM KNACDTB  kn
+                 left join MSALESTB ms ON ms.SALES_CD = kn.SALES_CD
+
+        WHERE 1=1
+        <if test='paramSalesCd != null and paramSalesCd != ""'>
+            AND kn.SALES_CD = ${paramSalesCd }
+        </if>
+        <if test='paramSearchValue != null and paramSearchValue != ""'>
+            AND (
+                LOWER(kn.NACD_NM) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
+                OR
+                LOWER(kn.ORCU_NM) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
+                OR
+                LOWER(kn.DEPT_NM) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
+                OR
+                LOWER(kn.MOBILE) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
+                OR
+                LOWER(kn.TEL) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
+                OR
+                LOWER(kn.EMAIL) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
+
+                )
+        </if>
+        ORDER BY kn.MAKE_DAY desc
+        LIMIT #{paramPageRows} OFFSET #{paramStartRowNum }
+    </select>
+
+    <select id="mkt1020_select" resultType="java.util.HashMap">
+        SELECT
+              kn.NACD_CD	            as	nacdCd
+            , kn.NACD_CD	            as	oldNacdCd
+            , kn.NACD_NM		        as	nacdNm
+            , kn.SALES_CD		        as	salesCd
+            , ms.SALES_NM               as  salesNm
+            , kn.ORCU_CD                as  orcuCd
+            , kn.ORCU_NM                as  orcuNm
+            , kn.DEPT_NM                as  orcuNm
+            , kn.TITL_NM                as  orcuNm
+            , kn.MAKE_DAY		        as	makeDay
+            , kn.MOBILE    		        as	mobile
+            , kn.TEL       		        as	tel
+            , kn.FAX       		        as	fax
+            , kn.EMAIL     		        as	email
+            , kn.ZIP_CD_H 				as	zipCdH
+            , kn.ADDR_HB 		        as	addrHB
+            , kn.ADDR_HD 		        as	addrHD
+            , kn.ZIP_CD_O 				as	zipCdO
+            , kn.ADDR_OB 		        as	addrOB
+            , kn.ADDR_OD 		        as	addrOD
+            , kn.EXPLAINS    		    as	explains
+            , kn.USE_YN     		    as	useYn
+            , kn.REG_DATE     		    as	redDate
+            , kn.REG_ID     		    as	redId
+            , kn.UPDATE_DATE   		    as	updateDate
+            , kn.UPDATE_ID     		    as	updateId
+
+            , 'U'                       as  iuD
+
+        FROM KNACDTB  kn
+            left join MSALESTB ms ON ms.SALES_CD = kn.SALES_CD
+        WHERE kn.NACD_CD 	= 	#{paramNacdCd}
+
+    </select>
+
+    <insert id="mkt1020_insert" parameterType="java.util.Map" useGeneratedKeys="true" keyProperty="nacdCd">
+        <selectKey keyProperty="nacdCd" resultType="String" order="BEFORE">
+            select ifnull((cast(max(substr(NACD_CD,1,6)) as unsigned) + 1), '500001')  from KNACDTB
+        </selectKey>
+        <foreach collection="list1" item="item" separator=";">
+            INSERT INTO KNACDTB
+                (
+                      NACD_CD
+                    , NACD_NM
+                    , SALES_CD
+                    , ORCU_CD
+                    , ORCU_NM
+                    , DEPT_NM
+                    , TITL_NM
+                    , MAKE_DAY
+                    , MOBILE
+                    , TEL
+                    , FAX
+                    , EMAIL
+                    , ZIP_CD_H
+                    , ADDR_HB
+                    , ADDR_HD
+                    , ZIP_CD_O
+                    , ADDR_OB
+                    , ADDR_OD
+                    , EXPLAINS
+                    , USE_YN
+                    , REG_DATE
+                    , REG_ID
+                    , UPDATE_DATE
+                    , UPDATE_ID
+                ) VALUES (
+                      #{nacdCd}
+                    , #{item.nacdNm}
+                    , #{item.salesCd}
+                    , #{item.orcuCd}
+                    , #{item.orcuNm}
+                    , #{item.deptNm}
+                    , #{item.titlNm}
+                    , #{item.makeDay}
+                    , #{item.mobile}
+                    , #{item.tel}
+                    , #{item.fax}
+                    , #{item.email}
+                    , #{item.zipCdH}
+                    , #{item.addrHb}
+                    , #{item.addrHd}
+                    , #{item.zipCdO}
+                    , #{item.addrOb}
+                    , #{item.addrOd}
+                    , #{item.explains}
+                    , #{item.useYn}
+                    , NOW()
+                    , #{userId}
+                    , NOW()
+                    , #{userId}
+                )
+        </foreach>
+    </insert>
+
+    <update id="mkt1020_update" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            UPDATE KNACDTB
+                SET
+                      NACD_NM	    =   #{item.nacdNm}
+                    , SALES_CD	    =   #{item.salesCd}
+                    , ORCU_CD       =   #{item.orcuCd}
+                    , ORCU_NM       =   #{item.orcuNm}
+                    , DEPT_NM       =   #{item.deptNm}
+                    , TITL_NM       =   #{item.titlNm}
+                    , MAKE_DAY	    =   #{item.makeDay}
+                    , MOBILE        =   #{item.mobile}
+                    , TEL           =   #{item.tel}
+                    , FAX           =   #{item.fax}
+                    , EMAIL         =   #{item.email}
+                    , ZIP_CD_H 	    =   #{item.zipCdH}
+                    , ADDR_HB 	    =   #{item.addrHb}
+                    , ADDR_HD 	    =   #{item.addrHd}
+                    , ZIP_CD_O 	    =   #{item.zipCdO}
+                    , ADDR_OB 	    =   #{item.addrOb}
+                    , ADDR_OD 	    =   #{item.addrOd}
+                    , EXPLAINS      =   #{item.explains}
+                    , USE_YN        =   #{item.useYn}
+                    , UPDATE_DATE   =   NOW()
+                    , UPDATE_ID     =   #{userId}
+
+            WHERE NACD_CD       =   #{item.nacdCd}
+        </foreach>
+    </update>
+
+    <delete id="mkt1020_delete" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            DELETE FROM KNACDTB
+                    WHERE NACD_CD     	=   #{item.nacdCd }
+        </foreach>
+    </delete>
+
+
+    <!-- ###  영업목표설정 list    ################################ -->
+    <select id="mkt2010_list" resultType="java.util.HashMap">
+
+         SELECT
+             #{paramDivCd }	as	divCd
+            , b.sales_cd	as	salesCd
+            , b.sales_nm    as  salesNm
+            , MAX(IF(right(a.STD_YYMM, 2) = '00', a.TARGET_AMT, 0)) as o00Amt
+            , MAX(IF(right(a.STD_YYMM, 2) = '00', 'Y','N')) as U00
+            , MAX(IF(right(a.STD_YYMM, 2) = '01', a.TARGET_AMT, 0)) as o01Amt
+            , MAX(IF(right(a.STD_YYMM, 2) = '01', 'Y','N')) as U01
+            , MAX(IF(right(a.STD_YYMM, 2) = '02', a.TARGET_AMT, 0)) as o02Amt
+            , MAX(IF(right(a.STD_YYMM, 2) = '02', 'Y','N')) as U02
+            , MAX(IF(right(a.STD_YYMM, 2) = '03', a.TARGET_AMT, 0)) as o03Amt
+            , MAX(IF(right(a.STD_YYMM, 2) = '03', 'Y','N')) as U03
+            , MAX(IF(right(a.STD_YYMM, 2) = '04', a.TARGET_AMT, 0)) as o04Amt
+            , MAX(IF(right(a.STD_YYMM, 2) = '04', 'Y','N')) as U04
+            , MAX(IF(right(a.STD_YYMM, 2) = '05', a.TARGET_AMT, 0)) as o05Amt
+            , MAX(IF(right(a.STD_YYMM, 2) = '05', 'Y','N')) as U05
+            , MAX(IF(right(a.STD_YYMM, 2) = '06', a.TARGET_AMT, 0)) as o06Amt
+            , MAX(IF(right(a.STD_YYMM, 2) = '06', 'Y','N')) as U06
+            , MAX(IF(right(a.STD_YYMM, 2) = '07', a.TARGET_AMT, 0)) as o07Amt
+            , MAX(IF(right(a.STD_YYMM, 2) = '07', 'Y','N')) as U07
+            , MAX(IF(right(a.STD_YYMM, 2) = '08', a.TARGET_AMT, 0)) as o08Amt
+            , MAX(IF(right(a.STD_YYMM, 2) = '08', 'Y','N')) as U08
+            , MAX(IF(right(a.STD_YYMM, 2) = '09', a.TARGET_AMT, 0)) as o09Amt
+            , MAX(IF(right(a.STD_YYMM, 2) = '09', 'Y','N')) as U09
+            , MAX(IF(right(a.STD_YYMM, 2) = '10', a.TARGET_AMT, 0)) as o10Amt
+            , MAX(IF(right(a.STD_YYMM, 2) = '10', 'Y','N')) as U10
+            , MAX(IF(right(a.STD_YYMM, 2) = '11', a.TARGET_AMT, 0)) as o11Amt
+            , MAX(IF(right(a.STD_YYMM, 2) = '11', 'Y','N')) as U11
+            , MAX(IF(right(a.STD_YYMM, 2) = '12', a.TARGET_AMT, 0)) as o12Amt
+            , MAX(IF(right(a.STD_YYMM, 2) = '12', 'Y','N')) as U12
+
+         FROM MSALESTB as b
+              -- 목표자료
+              left join KORTGTB as a ON LEFT(a.STD_YYMM, 4) =   #{paramYear } AND a.DIV_CD  =   #{paramDivCd }
+          AND b.SALES_CD = a.SALES_CD
+
+        WHERE 1=1
+        GROUP BY b.sales_cd
+
+    </select>
+
+    <insert id="mkt2010_insert" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            INSERT INTO KORTGTB
+                (
+                      STD_YYMM
+                    , SALES_CD
+                    , DIV_CD
+                    , TARGET_AMT
+                    , REG_DATE
+                    , REG_ID
+                    , UPDATE_DATE
+                    , UPDATE_ID
+                ) VALUES (
+                      #{item.stdYymm}
+                    , #{item.salesCd}
+                    , #{item.divCd}
+                    , #{item.targetAmt}
+                    , NOW()
+                    , #{userId}
+                    , NOW()
+                    , #{userId}
+                )
+        </foreach>
+    </insert>
+
+    <update id="mkt2010_update" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            UPDATE KORTGTB
+                SET
+                      TARGET_AMT    =   #{item.targetAmt}
+                    , UPDATE_DATE   =   NOW()
+                    , UPDATE_ID     =   #{userId}
+
+            WHERE STD_YYMM    =   #{item.stdYymm}
+              AND SALES_CD    =   #{item.salesCd}
+              AND DIV_CD      =   #{item.divCd}
+        </foreach>
+    </update>
+
+    <delete id="mkt2010_delete" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            DELETE FROM KORTGTB
+             WHERE STD_YYMM     =   #{item.stdYymm}
+               AND SALES_CD     =   #{item.salesCd}
+               AND DIV_CD       =   #{item.divCd}
+        </foreach>
+    </delete>
+
+
+    <!-- ###  프로젝트정보 list    ################################ -->
+    <select id="mkt3010_maxPages" resultType="java.util.HashMap">
+        SELECT
+        count(*)  as maxPages
+        FROM KPROJTB  p
+        WHERE 1 = 1
+            <if test="paramSalesCd != null and paramSalesCd != ''">
+                AND   p.SALES_CD     = #{paramSalesCd }
+            </if>
+            <if test="paramConsCd != null and paramConsCd != ''">
+                AND   p.CONS_CD      = #{paramConsCd }
+            </if>
+            <if test="paramStepCd != null and paramStepCd != ''">
+                AND   p.STEP_CD      = #{paramStepCd }
+            </if>
+
+        <if test='paramSearchValue != null and paramSearchValue != ""'>
+            AND (
+                LOWER(p.PROJECT_NM) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
+                OR
+                LOWER(p.ORCU_NM) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
+            )
+        </if>
+
+    </select>
+
+
+    <select id="mkt3010_list" resultType="java.util.HashMap">
+        SELECT
+               ROW_NUMBER() OVER (ORDER BY p.PROJECT_CD desc) as rowNum
+             , p.PROJECT_CD		as	projectCd
+             , p.PROJECT_NM		as	projectNm
+             , IFNULL(o.ORD_CNT,0)		as	ordCnt
+             , p.MAKE_DAY		as	makeDay
+             , p.ORDER_DAY		as	orderDay
+             , p.OUT_DAY		as	outDay
+             , p.SALES_CD		as	salesCd
+             , ms.SALES_NM		as	salesNm
+             , p.ORCU1_CD		as	orcu1Cd
+             , p.ORCU1_NM		as	orcu1Nm
+             , p.LEVEL_CD		as	levelCd
+             , c1.COMM_NM		as	levelNm
+             , p.TYPE_CD		as	typeCd
+             , c2.COMM_NM		as	typeNm
+             , p.CONS_CD		as	consCd
+             , c3.COMM_NM		as	consNm
+             , p.ZONE_CD		as	zoneCd
+             , c4.COMM_NM		as	zoneNm
+             , p.STEP_CD		as	stepCd
+             , c5.COMM_NM		as	stepNm
+             , p.EXPLAINS		as	explains
+             , p.REG_DATE		as	regDate
+             , p.REG_ID			as	regId
+             , p.UPDATE_DATE	as	updateDate
+             , p.UPDATE_ID		as	updateId
+        FROM KPROJTB p
+             -- 계약정보
+                left join (
+                            SELECT PROJECT_CD, COUNT(*) as ORD_CNT FROM KODERTB GROUP BY PROJECT_CD
+                           ) o ON o.PROJECT_CD = p.PROJECT_CD
+            -- 영업담당
+                left join MSALESTB as ms ON ms.SALES_CD = p.SALES_CD
+            -- 프로젝트중요도
+                 left join MCOMMTB as c1 ON c1.COMM_CD = p.LEVEL_CD
+            -- 발주유형
+                 left join MCOMMTB as c2 ON c2.COMM_CD = p.TYPE_CD
+            -- 공사구분
+                 left join MCOMMTB as c3 ON c3.COMM_CD = p.CONS_CD
+            -- 지역군분류
+                 left join MCOMMTB as c4 ON c4.COMM_CD = p.ZONE_CD
+            -- 진행상태구분.
+                 left join MCOMMTB as c5 ON c5.COMM_CD = p.STEP_CD
+
+        WHERE 1=1
+            <if test="paramSalesCd != null and paramSalesCd != ''">
+                AND   p.SALES_CD     = #{paramSalesCd }
+            </if>
+            <if test="paramConsCd != null and paramConsCd != ''">
+                AND   p.CONS_CD      = #{paramConsCd }
+            </if>
+            <if test="paramStepCd != null and paramStepCd != ''">
+                AND   p.STEP_CD      = #{paramStepCd }
+            </if>
+
+            <if test='paramSearchValue != null and paramSearchValue != ""'>
+                AND (
+                    LOWER(p.PROJECT_NM) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
+                    OR
+                    LOWER(p.ORCU1_NM) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
+                    )
+            </if>
+        LIMIT #{paramPageRows} OFFSET #{paramStartRowNum }
+    </select>
+
+    <select id="mkt3010_select" resultType="java.util.HashMap">
+        SELECT
+               p.PROJECT_CD		as	projectCd
+             , p.PROJECT_NM		as	projectNm
+             , p.MAKE_DAY		as	makeDay
+             , p.ORDER_DAY		as	orderDay
+             , p.OUT_DAY		as	outDay
+             , p.SALES_CD		as	salesCd
+             , ms.SALES_NM		as	salesNm
+             , p.ORCU1_CD		as	orcu1Cd
+             , p.ORCU1_NM		as	orcu1Nm
+             , p.LEVEL_CD		as	levelCd
+             , c1.COMM_NM		as	levelNm
+             , p.TYPE_CD		as	typeCd
+             , c2.COMM_NM		as	typeNm
+             , p.CONS_CD		as	consCd
+             , c3.COMM_NM		as	consNm
+             , p.ZONE_CD		as	zoneCd
+             , c4.COMM_NM		as	zoneNm
+             , p.STEP_CD		as	stepCd
+             , c5.COMM_NM		as	stepNm
+             , p.EXPLAINS		as	explains
+             , p.REG_DATE		as	regDate
+             , p.REG_ID			as	regId
+             , p.UPDATE_DATE	as	updateDate
+             , p.UPDATE_ID		as	updateId
+        FROM KPROJTB p
+            -- 영업담당
+                left join MSALESTB as ms ON ms.SALES_CD = p.SALES_CD
+            -- 프로젝트중요도
+                 left join MCOMMTB as c1 ON c1.COMM_CD = p.LEVEL_CD
+            -- 발주유형
+                 left join MCOMMTB as c2 ON c2.COMM_CD = p.TYPE_CD
+            -- 공사구분
+                 left join MCOMMTB as c3 ON c3.COMM_CD = p.CONS_CD
+            -- 지역군분류
+                 left join MCOMMTB as c4 ON c4.COMM_CD = p.ZONE_CD
+            -- 진행상태구분.
+                 left join MCOMMTB as c5 ON c5.COMM_CD = p.STEP_CD
+
+        WHERE p.PROJECT_CD = #{paramProjectCd }
+    </select>
+
+    <insert id="mkt3010_insert" parameterType="java.util.Map" useGeneratedKeys="true" keyProperty="projectCd">
+        <selectKey keyProperty="projectCd" resultType="String" order="BEFORE">
+            select ifnull((cast(max(substr(PROJECT_CD,1,6)) as unsigned) + 1), '100001')  from KPROJTB
+        </selectKey>
+        <foreach collection="list1" item="item" separator=";">
+            INSERT INTO KPROJTB
+                (
+                      PROJECT_CD
+                    , MAKE_DAY
+                    , ORDER_DAY
+                    , PROJECT_NM
+                    , SALES_CD
+                    , ORCU1_CD
+                    , ORCU1_NM
+                    , LEVEL_CD
+                    , TYPE_CD
+                    , CONS_CD
+                    , STEP_CD
+                    , ZONE_CD
+                    , OUT_DAY
+                    , EXPLAINS
+                    , REG_DATE
+                    , REG_ID
+                    , UPDATE_DATE
+                    , UPDATE_ID
+                ) VALUES (
+                      #{projectCd}
+                    , #{item.makeDay}
+                    , #{item.orderDay}
+                    , #{item.projectNm}
+                    , #{item.salesCd}
+                    , #{item.orcu1Cd}
+                    , #{item.orcu1Nm}
+                    , #{item.levelCd}
+                    , #{item.typeCd}
+                    , #{item.consCd}
+                    , #{item.stepCd}
+                    , #{item.zoneCd}
+                    , #{item.outDay}
+                    , #{item.explains}
+                    , NOW()
+                    , #{userId}
+                    , NOW()
+                    , #{userId}
+                )
+        </foreach>
+    </insert>
+
+    <update id="mkt3010_update" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            UPDATE KPROJTB
+                SET
+                      MAKE_DAY      =   #{item.makeDay}
+                    , ORDER_DAY     =   #{item.orderDay}
+                    , PROJECT_NM    =   #{item.projectNm}
+                    , SALES_CD      =   #{item.salesCd}
+                    , ORCU1_CD      =   #{item.orcu1Cd}
+                    , ORCU1_NM      =   #{item.orcu1Nm}
+                    , LEVEL_CD      =   #{item.levelCd}
+                    , TYPE_CD       =   #{item.typeCd}
+                    , CONS_CD       =   #{item.consCd}
+                    , STEP_CD       =   #{item.stepCd}
+                    , ZONE_CD       =   #{item.zoneCd}
+                    , OUT_DAY       =   #{item.outDay}
+                    , EXPLAINS      =   #{item.explains}
+                    , UPDATE_DATE   =   NOW()
+                    , UPDATE_ID     =   #{userId}
+
+            WHERE PROJECT_CD    =   #{item.projectCd}
+        </foreach>
+    </update>
+
+    <delete id="mkt3010_delete" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            DELETE FROM KPROJTB
+             WHERE PROJECT_CD    =   #{item.projectCd}
+        </foreach>
+    </delete>
+
+    <!-- ###  프로젝트 > 수주계약정보 list    ################################ -->
+    <select id="mkt3020_select_list" resultType="java.util.HashMap">
+        SELECT
+               o.PROJECT_CD		as	projectCd
+             , p.PROJECT_NM		as	projectNm
+             , o.SEQ    		as	seq
+             , o.ORD_DAY		as	ordDay
+             , o.METHOD_CD		as	methodCd
+             , o.METHOD_NM		as	methodNm
+             , o.ORCU2_CD		as	orcu2Cd
+             , o.ORCU2_NM		as	orcu2Nm
+             , o.ORCU3_CD		as	orcu3Cd
+             , o.ORCU3_NM		as	orcu3Nm
+             , o.EST_QTY		as	estQty
+             , o.EST_AMT		as	estAmt
+             , o.ORD_QTY		as	ordQty
+             , o.ORD_AMT		as	ordAmt
+             , o.EXPLAINS		as	explains
+             , o.REG_DATE		as	regDate
+             , o.REG_ID			as	regId
+             , o.UPDATE_DATE	as	updateDate
+             , o.UPDATE_ID		as	updateId
+             , 'U'              as  iuD
+        FROM KODERTB o
+            -- 프로젝트 마스타
+                left join KPROJTB as p ON p.PROJECT_CD = o.PROJECT_CD
+
+        WHERE o.PROJECT_CD = #{paramProjectCd }
+        ORDER BY o.ORD_DAY asc
+    </select>
+
+    <insert id="mkt3020_insert" parameterType="java.util.Map" useGeneratedKeys="true" keyProperty="seq">
+        <selectKey keyProperty="seq" resultType="String" order="BEFORE">
+            SELECT IFNULL(max(SEQ),0) + 1 as seq from KODERTB where PROJECT_CD = #{projectCd }
+        </selectKey>
+        <foreach collection="list1" item="item" separator=";">
+            INSERT INTO KODERTB
+                (
+                      PROJECT_CD
+                    , SEQ
+                    , ORD_DAY
+                    , METHOD_CD
+                    , METHOD_NM
+                    , ORCU2_CD
+                    , ORCU2_NM
+                    , ORCU3_CD
+                    , ORCU3_NM
+                    , EST_QTY
+                    , EST_AMT
+                    , ORD_QTY
+                    , ORD_AMT
+                    , EXPLAINS
+                    , REG_DATE
+                    , REG_ID
+                    , UPDATE_DATE
+                    , UPDATE_ID
+                ) VALUES (
+                      #{item.projectCd}
+                    , #{item.seq }
+                    , #{item.ordDay}
+                    , #{item.methodCd}
+                    , #{item.methodNm}
+                    , #{item.orcu2Cd}
+                    , #{item.orcu2Nm}
+                    , #{item.orcu3Cd}
+                    , #{item.orcu3Nm}
+                    , #{item.estQty}
+                    , #{item.estAmt}
+                    , #{item.ordQty}
+                    , #{item.ordAmt}
+                    , #{item.explains}
+                    , NOW()
+                    , #{userId}
+                    , NOW()
+                    , #{userId}
+                )
+        </foreach>
+    </insert>
+
+    <update id="mkt3020_update" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            UPDATE KODERTB
+                SET
+                      ORD_DAY	   =   #{item.ordDay}
+                    , METHOD_CD	   =   #{item.methodCd}
+                    , METHOD_NM	   =   #{item.methodNm}
+                    , ORCU2_CD	   =   #{item.orcu2Cd}
+                    , ORCU2_NM	   =   #{item.orcu2Nm}
+                    , ORCU3_CD	   =   #{item.orcu3Cd}
+                    , ORCU3_NM	   =   #{item.orcu3Nm}
+                    , EST_QTY	   =   #{item.estQty}
+                    , EST_AMT	   =   #{item.estAmt}
+                    , ORD_QTY	   =   #{item.ordQty}
+                    , ORD_AMT	   =   #{item.ordAmt}
+                    , EXPLAINS	   =   #{item.explains}
+                    , UPDATE_DATE  =   NOW()
+                    , UPDATE_ID	   =   #{userId}
+
+            WHERE PROJECT_CD    =   #{item.projectCd}
+              AND SEQ           =   #{item.seq}
+        </foreach>
+    </update>
+
+    <delete id="mkt3020_delete" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            DELETE FROM KODERTB
+             WHERE PROJECT_CD    =   #{item.projectCd}
+               AND SEQ           =   #{item.seq}
+        </foreach>
+    </delete>
+
+    <!-- ###  활동일지 > 이벤트 일자정보 list    ################################ -->
+    <select id="mkt4010_list_event" resultType="java.util.HashMap">
+        SELECT
+            d.STD_DAY            as  stdDay
+        FROM KDAYDTB d
+        WHERE 1=1
+          AND SUBSTRING(d.STD_DAY, 1, 4) = #{paramYear}
+          AND SUBSTRING(d.STD_DAY, 5, 2) = #{paramMonth}
+        <if test="paramLevel != null and paramLevel != ''">
+            AND d.SALES_CD = #{paramSalesCd}
+        </if>
+        GROUP BY d.STD_DAY
+
+    </select>
+
+    <select id="mkt4010_list" resultType="java.util.HashMap">
+        SELECT
+              d.STD_DAY            as  stdDay
+            , d.SALES_CD           as  salesCd
+            , ms.SALES_NM          as  salesNm
+            , ms.EMP_CD            as  empCd
+            , d.SEQ                as  seq
+            , d.PROJECT_CD         as  projectCd
+            , kp.PROJECT_NM        as  projectNm
+            , d.TYPE_CD            as  typeCd
+            , c1.COMM_NM           as  typeNm
+            , d.SUBJECT            as  subject
+            , d.CONTENTS           as  contents
+            , d.LINE_NO            as  lineNo
+            , d.USE_YN             as  useYn
+        FROM KDAYDTB d
+            left join MSALESTB ms ON ms.SALES_CD = d.SALES_CD
+            left join KPROJTB kp ON kp.PROJECT_CD = d.PROJECT_CD
+            left join MCOMMTB c1 ON c1.COMM_CD = d.TYPE_CD
+        WHERE 1=1
+          AND d.STD_DAY     =   #{paramStdDay}
+        <if test="paramSalesCd != null and paramSalesCd != ''">
+            AND d.SALES_CD  =   #{paramSalesCd }
+        </if>
+
+    </select>
+
+    <select id="mkt4010_select" resultType="java.util.HashMap">
+        SELECT
+              d.STD_DAY             as  stdDay
+            , d.STD_DAY             as  oldStdDay
+            , d.SALES_CD            as  salesCd
+            , ms.SALES_NM           as  salesNm
+            , ms.EMP_CD             as  empCd
+            , d.SEQ                 as  seq
+            , d.PROJECT_CD          as  projectCd
+            , kp.PROJECT_NM         as  projectNm
+            , d.TYPE_CD             as  typeCd
+            , d.SUBJECT             as  subject
+            , d.CONTENTS            as  contents
+            , d.USE_YN              as  useYn
+            , d.LINE_NO             as  lineNo
+        FROM KDAYDTB d
+             left join MSALESTB ms ON ms.SALES_CD = d.SALES_CD
+             left join KPROJTB kp ON kp.PROJECT_CD = d.PROJECT_CD
+        WHERE 1=1
+          AND d.STD_DAY     =   #{paramStdDay}
+          AND d.SALES_CD    =   #{paramSalesCd }
+          AND d.SEQ         =   #{paramSeq }
+
+    </select>
+
+
+    <insert id="mkt4010_insert" parameterType="java.util.Map" useGeneratedKeys="true" keyProperty="seq">
+        <selectKey keyProperty="seq" resultType="String" order="BEFORE">
+            SELECT IFNULL(max(SEQ),0) + 1 as seq from KDAYDTB where STD_DAY = #{stdDay } AND SALES_CD = #{salesCd }
+        </selectKey>
+        <foreach collection="list1" item="item" separator=";">
+            INSERT INTO KDAYDTB
+                    (
+                      STD_DAY
+                    , SALES_CD
+                    , SEQ
+                    , PROJECT_CD
+                    , TYPE_CD
+                    , SUBJECT
+                    , CONTENTS
+                    , USE_YN
+                    , REG_DATE
+                    , REG_ID
+                    , UPDATE_DATE
+                    , UPDATE_ID
+                ) VALUES (
+                      #{item.stdDay}
+                    , #{item.salesCd }
+                    , #{seq }
+                    , #{item.projectCd}
+                    , #{item.typeCd}
+                    , #{item.subject}
+                    , #{item.contents}
+                    , #{item.useYn}
+                    , NOW()
+                    , #{userId}
+                    , NOW()
+                    , #{userId}
+                )
+        </foreach>
+    </insert>
+
+    <update id="mkt4010_update" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            UPDATE KDAYDTB
+                SET
+                  PROJECT_CD    =   #{item.projectCd}
+                , TYPE_CD       =   #{item.typeCd}
+                , SUBJECT       =   #{item.subject}
+                , CONTENTS      =   #{item.contents}
+                , USE_YN        =   #{item.useYn}
+                , UPDATE_DATE   =   NOW()
+                , UPDATE_ID     =   #{userId}
+
+            WHERE STD_DAY   =   #{item.stdDay}
+              AND SALES_CD  =   #{item.salesCd}
+              AND SEQ       =   #{item.seq}
+        </foreach>
+    </update>
+
+    <delete id="mkt4010_delete" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            DELETE FROM KDAYDTB
+                WHERE STD_DAY   =   #{item.stdDay}
+                  AND SALES_CD  =   #{item.salesCd}
+                  AND SEQ       =   #{item.seq}
+        </foreach>
+    </delete>
+
+    <insert id="mkt4010_fileSave" parameterType="java.util.Map">
+            INSERT INTO KDAYFTB
+                (
+                  STD_DAY
+                , SALES_CD
+                , SEQ
+                , CNT
+                , FILE_NM
+                , FILE_NM_X
+                , FILE_SIZE
+                , CONTENT_TYPE
+                , FILE_EXTENSION
+                , FILE_PATH
+            ) VALUES (
+                  #{stdDay }
+                , #{salesCd }
+                , #{seq }
+                , ( SELECT IFNULL(max(CNT),0) + 1 as cnt from KDAYFTB f where f.STD_DAY = #{stdDay } AND f.SALES_CD = #{salesCd } AND f.SEQ = #{seq } )
+                , #{fileNm }
+                , #{fileNmX }
+                , #{fileSize }
+                , #{contentType }
+                , #{fileExtension}
+                , #{filePath}
+            )
+    </insert>
+
+    <delete id="mkt4010_fileDelete" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            DELETE FROM KDAYFTB
+             WHERE STD_DAY   =   #{item.stdDay}
+               AND SALES_CD  =   #{item.salesCd}
+               AND SEQ       =   #{item.seq}
+        </foreach>
+    </delete>
+
+    <!-- ###  업무일지 보고서 전자결재용 저장    ################################ -->
+    <insert id="mkt4011_insert" parameterType="java.util.Map" useGeneratedKeys="true" keyProperty="lineNo">
+        <selectKey keyProperty="lineNo" resultType="String" order="BEFORE">
+            select ifnull((cast(max(substr(LINE_NO,1,6)) as unsigned) + 1), '100001')  from GLINETB where LINE_CD = #{lineCd }
+        </selectKey>
+        <foreach collection="list1" item="item" separator=";">
+            INSERT INTO GLINETB
+                    (
+                      LINE_CD
+                    , LINE_NO
+                    , SUBJECT
+                    , CONTENTS
+                    , EMP_CD
+                    , STD_DAY
+                    , REG_DATE
+                    , ATTACH_FILE_CNT
+                    , STATUS
+                ) VALUES (
+                      #{lineCd }
+                    , #{lineNo }
+                    , #{item.subject }
+                    , #{item.contents}
+                    , #{item.empCd}
+                    , #{item.stdDay}
+                    , NOW()
+                    , #{item.attachFileCnt}
+                    , '0'
+                )
+        </foreach>
+    </insert>
+
+<!--    결재문서 생선된 키값 영업활동일지에 저장 -->
+    <update id="mkt4011_update" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            UPDATE KDAYDTB
+                SET
+                  LINE_NO       =   #{lineNo}
+                , UPDATE_DATE   =   NOW()
+                , UPDATE_ID     =   #{userId}
+
+            WHERE STD_DAY   =   #{item.stdDay}
+              AND SALES_CD  =   #{item.salesCd}
+              AND SEQ       =   #{item.seq}
+        </foreach>
+    </update>
+
+<!--    결재문서 취소처리 저장 -->
+    <update id="mkt4011_update_line" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            UPDATE KDAYDTB
+                SET
+                  LINE_NO       =   null
+                , UPDATE_DATE   =   NOW()
+                , UPDATE_ID     =   #{userId}
+
+            WHERE LINE_NO   =   #{item.lineNo }
+        </foreach>
+    </update>
+
+   <delete id="mkt4011_delete_line" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            DELETE FROM GLINETB
+                  WHERE LINE_CD   =   #{item.lineCd}
+                    AND LINE_NO   =   #{item.lineNo}
+        </foreach>
+    </delete>
+
+
+
+
+    <!-- ###  프로젝트 진행상태 정보 불러오기 list    ################################ -->
+    <select id="step_check" resultType="java.util.HashMap">
+        SELECT   t.PROJECT_CD   as  projectCd
+               , t.STEP_CD      as  stepCd
+               , c.COMM_NM		as	stepNm
+               , t.MAKE_DAY     as  makeDay
+          FROM KSTEPTB t
+                 INNER JOIN (
+                                SELECT PROJECT_CD, MAX(MAKE_DAY) AS latest_make_day
+                                FROM KSTEPTB
+                                GROUP BY PROJECT_CD
+
+                            ) latest ON t.PROJECT_CD = latest.PROJECT_CD AND t.MAKE_DAY = latest.latest_make_day
+
+                 left join MCOMMTB c ON c.COMM_CD = t.STEP_Cd
+
+        WHERE t.PROJECT_CD = #{paramProjectCd}
+         ORDER BY t.STEP_CD DESC
+         LIMIT 1
+    </select>
+
+    <select id="step_list" resultType="java.util.HashMap">
+        SELECT
+            ROW_NUMBER() OVER (ORDER BY c.COMM_CD ASC) as rowNum
+             , c.COMM_CD        as  stepCd
+             , c.COMM_NM        as  stepNm
+             , s.MAKE_DAY		as	makeDay
+             , IFNULL(CONCAT(c.COMM_NM, ' ( ', STR_TO_DATE(s.MAKE_DAY,'%Y%m%d'), ' )'), c.COMM_NM) as  stepNmX
+             , s.EXPLAINS       as  explains
+             , #{paramProjectCd}    as  projectCd
+             , IF(s.MAKE_DAY IS NULL, 'I', 'U')	as	iuD
+        FROM MCOMMTB c
+                 left join KSTEPTB s ON s.STEP_CD = c.COMM_CD AND s.PROJECT_CD = #{paramProjectCd}
+
+        WHERE 1=1
+          AND LEFT(c.COMM_CD, 3) = '301';
+    </select>
+
+
+    <insert id="step_insert" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            INSERT INTO KSTEPTB
+                (
+                      PROJECT_CD
+                    , STEP_CD
+                    , MAKE_DAY
+                    , EXPLAINS
+                    , REG_DATE
+                    , REG_ID
+                    , UPDATE_DATE
+                    , UPDATE_ID
+                ) VALUES (
+                      #{item.projectCd}
+                    , #{item.stepCd}
+                    , #{item.makeDay}
+                    , #{item.explains}
+                    , NOW()
+                    , #{userId}
+                    , NOW()
+                    , #{userId}
+                )
+        </foreach>
+    </insert>
+
+    <update id="step_update" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            UPDATE KSTEPTB
+                SET
+                      MAKE_DAY      =   #{item.makeDay}
+                    , EXPLAINS      =   #{item.explains}
+                    , UPDATE_DATE   =   NOW()
+                    , UPDATE_ID     =   #{userId}
+            WHERE PROJECT_CD        =   #{item.projectCd}
+              AND STEP_CD           =   #{item.stepCd}
+        </foreach>
+    </update>
+
+
+    <delete id="step_delete" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            DELETE FROM KSTEPTB
+             WHERE PROJECT_CD        =   #{item.projectCd}
+               AND STEP_CD           =   #{item.stepCd}
+        </foreach>
+    </delete>
+
+
+    <!-- ###  활동일지 검색정보 불러오기 list    ################################ -->
+    <select id="mkt4020_maxPages" resultType="java.util.HashMap">
+        SELECT
+            count(*)  as maxPages
+        FROM KDAYDTB d
+            left join KPROJTB p ON p.PROJECT_CD = d.PROJECT_CD
+        WHERE 1=1
+        <if test="paramSalesCd != null and paramSalesCd != ''">
+            AND d.SALES_CD  =   #{paramSalesCd }
+        </if>
+        <if test='paramSearchValue != null and paramSearchValue != ""'>
+            AND (
+            LOWER(d.SUBJECT) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
+            OR
+            LOWER(d.CONTENTS) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
+            OR
+            LOWER(p.PROJECT_NM) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
+            )
+        </if>
+
+    </select>
+
+
+    <select id="mkt4020_list" resultType="java.util.HashMap">
+        SELECT
+               ROW_NUMBER() OVER (ORDER BY d.STD_DAY desc, d.SEQ desc) as rowNum
+             , d.STD_DAY			as	stdDay
+		     , d.SALES_CD		    as	salesCd
+             , s.SALES_NM		    as	salesNm
+             , d.SEQ				as	seq
+             , d.TYPE_CD            as  typeCd
+             , c.COMM_NM            as  typeNm
+             , d.PROJECT_CD		    as	projectCd
+             , p.PROJECT_NM		    as	projectNm
+             , d.SUBJECT			as	subject
+             , d.CONTENTS		    as	contents
+             , DATE_FORMAT(d.REG_DATE, '%Y-%m-%d %H:%i:%s') as regDate
+             , e.IMAGE_FILE_NM      as  imageFileNm
+
+             , (SELECT e1.EMP_NM FROM KDAYRTB r
+                                 left join HEMPTB e1 ON e1.EMP_CD = r.EMP_CD
+                                               WHERE r.STD_DAY = d.STD_DAY
+                                                 AND r.SALES_CD = d.SALES_CD
+                                                 AND r.SEQ = d.SEQ
+                                               ORDER BY r.NO DESC
+                                                LIMIT 1
+                )  AS replyEmpNm
+
+             , (SELECT r.REPLY FROM KDAYRTB r  WHERE r.STD_DAY = d.STD_DAY
+                                                 AND r.SALES_CD = d.SALES_CD
+                                                 AND r.SEQ = d.SEQ
+                                               ORDER BY r.NO DESC
+                                                LIMIT 1
+                )  AS replyReply
+
+            , (SELECT r.RATING FROM KDAYRTB r  WHERE r.STD_DAY = d.STD_DAY
+                                                 AND r.SALES_CD = d.SALES_CD
+                                                 AND r.SEQ = d.SEQ
+                                                ORDER BY r.NO DESC
+                                                 LIMIT 1
+               )  AS replyRating
+
+            , DATE_FORMAT((SELECT r.REG_DATE FROM KDAYRTB r WHERE r.STD_DAY = d.STD_DAY
+                                                 AND r.SALES_CD = d.SALES_CD
+                                                 AND r.SEQ = d.SEQ
+                                                ORDER BY r.NO DESC
+                                                LIMIT 1
+                ), '%Y-%m-%d %H:%i:%s')  AS replyRegDate
+
+        FROM KDAYDTB d
+                 left join MSALESTB s ON s.SALES_CD = d.SALES_CD
+                 left join HEMPTB e ON e.EMP_CD = s.EMP_CD
+                 left join KPROJTB p ON p.PROJECT_CD = d.PROJECT_CD
+                 left join MCOMMTB c ON c.COMM_CD = d.TYPE_CD
+        WHERE 1=1
+            <if test="paramSalesCd != null and paramSalesCd != ''">
+                AND d.SALES_CD  =   #{paramSalesCd }
+            </if>
+            <if test='paramSearchValue != null and paramSearchValue != ""'>
+                AND (
+                LOWER(d.SUBJECT) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
+                OR
+                LOWER(d.CONTENTS) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
+                OR
+                LOWER(p.PROJECT_NM) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
+                )
+            </if>
+        ORDER BY d.STD_DAY desc, d.SEQ desc
+        LIMIT #{paramPageRows} OFFSET #{paramStartRowNum }
+    </select>
+
+    <!-- ###  업무보고서 진행현황 list    ################################ -->
+    <select id="mkt4030_maxPages" resultType="java.util.HashMap">
+        SELECT
+            count(*)  as maxPages
+        FROM (
+                SELECT
+                      STD_DAY
+                    , LINE_NO
+                    , SALES_CD
+                FROM KDAYDTB
+                WHERE 1=1
+                AND LEFT(STD_DAY, 4)		=	#{paramStdYear }
+                <if test="paramStdMonth != null and paramStdMonth != ''">
+                    AND   SUBSTR(STD_DAY, 5, 2)     = #{paramStdMonth }
+                </if>
+                AND SALES_CD = #{paramSalesCd }
+                AND LINE_NO IS NOT NULL
+                GROUP BY  LINE_NO
+            ) d
+          left join GLINETB g ON g.LINE_CD = '7011101' AND g.LINE_NO = d.LINE_NO
+          left join KLINETB k ON k.LINE_CD = '7011101' AND k.LINE_NO = d.LINE_NO AND k.STATUS = '2'
+        WHERE 1=1
+        <if test='paramStdStatus != null and paramStdStatus != ""'>
+            AND   g.STATUS  =   #{paramStdStatus }
+        </if>
+        <if test='paramSearchValue != null and paramSearchValue != ""'>
+            AND (
+            LOWER(g.CONTENTS) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
+            OR
+            LOWER(g.SUBJECT) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
+            )
+        </if>
+    </select>
+
+
+    <select id="mkt4030_list" resultType="java.util.HashMap">
+        SELECT    ROW_NUMBER() OVER (ORDER BY d.LINE_NO desc) as rowNum
+                , d.SALES_CD        as  salesCd
+                , g.LINE_CD         as  lineCd
+                , d.LINE_NO         as  lineNo
+                , g.EMP_CD          as  empCd
+                , h1.EMP_NM         as  empNm
+                , CONCAT(
+                            DATE_FORMAT(d.STD_DAY, '%Y-%m-%d '),
+                            ELT( WEEKDAY(d.STD_DAY) + 1,
+                                '월요일', '화요일', '수요일', '목요일', '금요일', '토요일', '일요일'
+                                )
+                        )                   as stdDay
+                , DATE_FORMAT(g.REG_DATE, '%Y-%m-%d %H:%i:%s') as regDate
+                , CASE
+                    WHEN g.STATUS = '0' THEN '진행중'
+                    WHEN g.STATUS = '1' THEN '결재완료'
+                    WHEN g.STATUS = '2' THEN '반려'
+                    ELSE ''
+                    END             as  statusNm
+                , k.EXPLAINS        as  explains
+                , k.EMP_CD_APP      as  empCdApp
+                , h2.EMP_NM         as  empNmApp
+                , g.SUBJECT         as  subject
+                , g.CONTENTS        as  contents
+          FROM (
+                    SELECT
+                          STD_DAY
+                        , LINE_NO
+                        , SALES_CD
+                    FROM KDAYDTB
+                    WHERE 1=1
+                      AND LEFT(STD_DAY, 4)		=	#{paramStdYear }
+                    <if test="paramStdMonth != null and paramStdMonth != ''">
+                      AND   SUBSTR(STD_DAY, 5, 2)     = #{paramStdMonth }
+                    </if>
+                      AND SALES_CD = #{paramSalesCd }
+                      AND LINE_NO IS NOT NULL
+                    GROUP BY  LINE_NO
+                ) d
+            left join GLINETB g ON g.LINE_CD = '7011101' AND g.LINE_NO = d.LINE_NO
+            left join KLINETB k ON k.LINE_CD = '7011101' AND k.LINE_NO = d.LINE_NO AND k.STATUS = '2'
+            left join HEMPTB h1 ON h1.EMP_CD = g.EMP_CD
+            left join HEMPTB h2 ON h2.EMP_CD = k.EMP_CD_APP
+          WHERE 1=1
+            <if test='paramStdStatus != null and paramStdStatus != ""'>
+                AND   g.STATUS  =   #{paramStdStatus }
+            </if>
+            <if test='paramSearchValue != null and paramSearchValue != ""'>
+                AND (
+                LOWER(g.CONTENTS) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
+                OR
+                LOWER(g.SUBJECT) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
+                )
+            </if>
+          ORDER BY d.LINE_NO DESC
+          LIMIT #{paramPageRows} OFFSET #{paramStartRowNum }
+    </select>
+
+
+
+</mapper>

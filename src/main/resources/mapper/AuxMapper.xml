@@ -1,0 +1,609 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.iszion.api.aux.dao.AuxDAO">
+
+
+<!--    ************************************ ** -->
+<!--    ******   전자결재 처리부분    ********** ** -->
+<!--    ************************************ ** -->
+
+    <select id="auxMline_check" resultType="java.util.HashMap">
+        SELECT CASE
+                   WHEN COUNT(*) <![CDATA[ > ]]> 0 THEN 'Y'
+                   ELSE 'N'
+                   END AS useYn
+          FROM MLINETB
+         WHERE emp_cd_app != emp_cd
+           AND	(      emp_cd_app = #{paramEmpCd }
+                    OR emp_cd_c1 = #{paramEmpCd }
+                    OR emp_cd_c2 = #{paramEmpCd }
+                    OR emp_cd_c3 = #{paramEmpCd }
+                )
+    </select>
+
+
+    <select id="auxMline_list" resultType="java.util.HashMap">
+        SELECT ml.LINE_CD       as  lineCd
+             , kl.LINE_NO       as  lineNo
+             , ml.LINE_SEQ      as  lineSeq
+             , ml.EMP_CD_APP    as  empCdApp
+             , ml.EMP_CD        as  empCd
+             , ml.PASS_YN       as  passYn
+             , DATE_FORMAT(kl.SIGN_DATE, '%Y-%m-%d')     as  signDate
+             , kl.STATUS        as  status
+             , he.SIGN_FILE_NM  as  signFileNm
+             , he.EMP_NM        as  empNmApp
+             , c1.COMM_NM       as  pstnNm
+             , CASE
+                   WHEN ml.EMP_CD_APP = #{paramEmpCdApp } THEN '1'
+                   ELSE '0'
+                END             as  isSelectAccept
+        FROM MLINETB ml
+                 left join KLINETB kl ON kl.LINE_CD = ml.LINE_CD AND kl.EMP_CD_APP = ml.EMP_CD_APP AND kl.LINE_NO  =  #{paramLineNo}
+                 left join HEMPTB he ON he.EMP_CD = ml.EMP_CD_APP
+                 left join MCOMMTB c1 ON c1.COMM_CD = he.PSTN_CD
+
+        WHERE ml.LINE_CD    =   #{paramLineCd}
+          AND ml.EMP_CD     =   #{paramEmpCd}
+          AND ml.USE_YN     =   'Y'
+        ORDER BY LINE_SEQ DESC
+    </select>
+
+
+    <select id="auxKline_check" resultType="java.util.HashMap">
+        SELECT count(*)         as  checkCnt
+          FROM KLINETB
+        WHERE LINE_CD    =   #{paramLineCd}
+          AND LINE_NO    =   #{paramLineNo}
+
+    </select>
+
+    <select id="aux1010_maxPages" resultType="java.util.HashMap">
+        SELECT
+            count(*)  as maxPages
+        FROM GLINETB g
+                 left join MCOMMTB c1 ON c1.COMM_CD = g.LINE_CD
+                 join MLINETB m ON g.LINE_CD = m.LINE_CD AND g.EMP_CD = m.EMP_CD
+            AND m.PASS_YN != 'Y' -- 전결인자료는 제외
+									                          AND m.USE_YN = 'Y' -- 사용중인것만 처리
+                left join KLINETB k ON g.LINE_CD = k.LINE_CD AND g.LINE_NO = k.LINE_NO AND m.EMP_CD_APP = k.EMP_CD_APP
+            left join HEMPTB he ON he.EMP_CD = m.EMP_CD
+
+        WHERE
+            m.EMP_CD_APP = #{paramEmpCdApp}
+        -- AND g.STATUS = '0' -- 문서가 아직 진행 중입니다.
+        --  AND (k.SIGN_DATE IS NULL OR k.STATUS IS NULL) -- 아직 승인되지 않았습니다.
+          AND (
+            (#{paramStatus} = '2' AND g.STATUS = '2') -- 문서가 아직 진행 중입니다.
+           OR
+            (#{paramStatus} != '2' AND g.STATUS = '0')
+
+          AND (
+            ( #{paramStatus} = '0' AND (k.SIGN_DATE IS NULL OR k.STATUS IS NULL) )
+           OR ( #{paramStatus} <![CDATA[ <> ]]> '0' AND k.STATUS = #{paramStatus} )
+            )
+
+          AND NOT EXISTS (
+            SELECT 1
+            FROM MLINETB M_prev
+            LEFT JOIN KLINETB K_prev ON g.LINE_CD = K_prev.LINE_CD AND g.LINE_NO = K_prev.LINE_NO AND M_prev.EMP_CD_APP = K_prev.EMP_CD_APP
+            WHERE
+            M_prev.LINE_CD = m.LINE_CD
+          AND M_prev.EMP_CD = m.EMP_CD
+          AND M_prev.LINE_SEQ <![CDATA[ > ]]> m.LINE_SEQ -- 시퀀스의 이전 승인자
+          AND (K_prev.SIGN_DATE IS NULL OR K_prev.STATUS IS NULL) -- 이전 승인자가 승인하지 않음
+          AND M_prev.PASS_YN != 'Y' -- 전결인자료는 제외
+          AND M_prev.USE_YN = 'Y' -- 사용중인것만 처리
+            )
+            )
+        ORDER BY
+            -- m.LINE_SEQ DESC
+            g.LINE_NO DESC
+
+    </select>
+
+    <select id="aux1010_list" resultType="java.util.HashMap">
+        SELECT ROW_NUMBER() OVER (ORDER BY g.LINE_CD asc, g.LINE_NO desc) as rowNum
+             , g.LINE_CD			as	lineCd
+             , c1.COMM_NM           as  lineNm
+             , g.LINE_NO			as	lineNo
+             , g.SUBJECT			as	subject
+             , g.CONTENTS		    as	contents
+             , g.EMP_CD			    as	empCd
+
+             , g.ATTACH_FILE_CNT    as	attachFileCnt
+             , g.STATUS 			as	status
+             , CASE WHEN g.STATUS   =   '0' AND k.STATUS IS NULL THEN '결재대기'
+                    WHEN g.STATUS	=	'0' AND k.STATUS = '1'	THEN '승인왐료'
+                    WHEN g.STATUS	=	'2'	THEN '반려'
+                    ELSE ''
+                END	                as	statusNm
+             , CONCAT(
+                DATE_FORMAT(g.STD_DAY, '%Y-%m-%d '),
+                ELT(
+                            WEEKDAY(g.STD_DAY) + 1,
+                            '월요일', '화요일', '수요일', '목요일', '금요일', '토요일', '일요일'
+                    )
+                )                   as stdDay
+             , DATE_FORMAT(g.REG_DATE, '%Y-%m-%d %H:%i:%s')    as regDate
+             , DATE_FORMAT(g.REG_DATE, '%Y-%m-%d' )            as regDateSign
+             , he.EMP_NM            as  empNm
+             , he.IMAGE_FILE_NM     as  imageFileNm
+        FROM GLINETB g
+                left join MCOMMTB c1 ON c1.COMM_CD = g.LINE_CD
+                     join MLINETB m ON g.LINE_CD = m.LINE_CD AND g.EMP_CD = m.EMP_CD
+                                                              AND m.PASS_YN != 'Y' -- 전결인자료는 제외
+									                          AND m.USE_YN = 'Y' -- 사용중인것만 처리
+                left join KLINETB k ON g.LINE_CD = k.LINE_CD AND g.LINE_NO = k.LINE_NO AND m.EMP_CD_APP = k.EMP_CD_APP
+                left join HEMPTB he ON he.EMP_CD = m.EMP_CD
+
+        WHERE
+              m.EMP_CD_APP = #{paramEmpCdApp}
+        --  AND g.STATUS = '0' -- 문서가 아직 진행 중입니다.
+        --  AND (k.SIGN_DATE IS NULL OR k.STATUS IS NULL) -- 아직 승인되지 않았습니다.
+          AND (
+                (#{paramStatus} = '2' AND g.STATUS = '2') -- 반려문서만 처리 중입니다. (반려)
+                OR
+                (#{paramStatus} != '2' AND g.STATUS = '0')  -- 반려문서 외 자료 처리 (결재대기/완료)
+
+              AND (
+                    ( #{paramStatus} = '0' AND (k.SIGN_DATE IS NULL OR k.STATUS IS NULL) )
+                    OR ( #{paramStatus} <![CDATA[ <> ]]> '0' AND k.STATUS = #{paramStatus} )
+                  )
+
+              AND NOT EXISTS (
+                SELECT 1
+                FROM MLINETB M_prev
+                LEFT JOIN KLINETB K_prev ON g.LINE_CD = K_prev.LINE_CD AND g.LINE_NO = K_prev.LINE_NO AND M_prev.EMP_CD_APP = K_prev.EMP_CD_APP
+                WHERE
+                M_prev.LINE_CD = m.LINE_CD
+              AND M_prev.EMP_CD = m.EMP_CD
+              AND M_prev.LINE_SEQ <![CDATA[ > ]]> m.LINE_SEQ -- 시퀀스의 이전 승인자
+              AND (K_prev.SIGN_DATE IS NULL OR K_prev.STATUS IS NULL) -- 이전 승인자가 승인하지 않음
+              AND M_prev.PASS_YN != 'Y' -- 전결인자료는 제외
+              AND M_prev.USE_YN = 'Y' -- 사용중인것만 처리
+                )
+        )
+        ORDER BY
+           -- m.LINE_SEQ DESC
+            g.LINE_NO DESC
+
+        LIMIT #{paramPageRows} OFFSET #{paramStartRowNum }
+    </select>
+
+
+    <insert id="aux1011_insert" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            INSERT INTO KLINETB
+                (
+                      LINE_CD
+                    , LINE_NO
+                    , EMP_CD_APP
+                    , SIGN_DATE
+                    , STATUS
+                    , EXPLAINS
+                ) VALUES (
+                      #{item.lineCd}
+                    , #{item.lineNo}
+                    , #{item.empCdApp}
+                    , now()
+                    , #{item.status}
+                    , #{item.explains}
+                    )
+        </foreach>
+    </insert>
+
+    <update id="aux1011_update_gLine" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            UPDATE GLINETB
+                SET STATUS = #{item.status}
+
+            WHERE LINE_CD   =   #{item.lineCd}
+              AND LINE_NO   =   #{item.lineNo}
+        </foreach>
+    </update>
+
+
+    <update id="aux1011_update" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            UPDATE KDAYRTB
+            SET
+              REPLY         =   #{item.reply}
+            , RATING        =   #{item.rating}
+
+            WHERE STD_DAY       =   #{item.stdDay}
+            AND SALES_CD      =   #{item.salesCd}
+            AND SEQ           =   #{item.seq}
+            AND NO            =   #{item.no}
+        </foreach>
+    </update>
+
+
+    <delete id="aux1011_delete" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            DELETE FROM KDAYRTB
+            WHERE STD_DAY       =   #{item.stdDay}
+            AND SALES_CD      =   #{item.salesCd}
+            AND SEQ           =   #{item.seq}
+            AND NO            =   #{item.no}
+        </foreach>
+    </delete>
+
+
+
+<!--    ************************************ ** -->
+<!--    ******   대시보드 처리부분    ********** ** -->
+<!--    ************************************ ** -->
+
+    <select id="countAll_list" resultType="java.util.HashMap">
+        SELECT
+              COUNT(if(d.DAY_DOC_CNT <![CDATA[ > ]]> 0, 1, null))                           as totCnt
+            , COUNT(if(p.STEP_CD = '3011101' AND d.DAY_DOC_CNT <![CDATA[ > ]]> 0, 1, null)) as totC1101	-- 인입문의
+            , COUNT(if(p.STEP_CD = '3011110' AND d.DAY_DOC_CNT <![CDATA[ > ]]> 0, 1, null)) as totC1110	-- 정보파악
+            , COUNT(if(p.STEP_CD = '3011120' AND d.DAY_DOC_CNT <![CDATA[ > ]]> 0, 1, null)) as totC1120 -- 설계진행
+            , COUNT(if(p.STEP_CD = '3011130' AND d.DAY_DOC_CNT <![CDATA[ > ]]> 0, 1, null)) as totC1130	-- 과업중지
+            , COUNT(if(p.STEP_CD = '3011140' AND d.DAY_DOC_CNT <![CDATA[ > ]]> 0, 1, null)) as totC1140	-- 설계완료
+            , COUNT(if(p.STEP_CD = '3011150' AND d.DAY_DOC_CNT <![CDATA[ > ]]> 0, 1, null)) as totC1150	-- 설계변경
+            , COUNT(if(p.STEP_CD = '3011190' AND d.DAY_DOC_CNT <![CDATA[ > ]]> 0, 1, null)) as totC1190	-- 계약완료
+            , COUNT(if(p.STEP_CD = '3019900' AND d.DAY_DOC_CNT <![CDATA[ > ]]> 0, 1, null)) as totC9900	-- 퍠전
+
+            , COUNT(if(LEFT(p.MAKE_DAY, 4) = LEFT(#{paramStdDay}, 4) AND d.DAY_DOC_CNT <![CDATA[ > ]]> 0, 1, null))                           as totCntY
+            , COUNT(if(LEFT(p.MAKE_DAY, 4) = LEFT(#{paramStdDay}, 4) AND p.STEP_CD = '3011101' AND d.DAY_DOC_CNT <![CDATA[ > ]]> 0, 1, null)) as totC1101Y	-- 인입문의
+            , COUNT(if(LEFT(p.MAKE_DAY, 4) = LEFT(#{paramStdDay}, 4) AND p.STEP_CD = '3011110' AND d.DAY_DOC_CNT <![CDATA[ > ]]> 0, 1, null)) as totC1110Y	-- 정보파악
+            , COUNT(if(LEFT(p.MAKE_DAY, 4) = LEFT(#{paramStdDay}, 4) AND p.STEP_CD = '3011120' AND d.DAY_DOC_CNT <![CDATA[ > ]]> 0, 1, null)) as totC1120Y 	-- 설계진행
+            , COUNT(if(LEFT(p.MAKE_DAY, 4) = LEFT(#{paramStdDay}, 4) AND p.STEP_CD = '3011130' AND d.DAY_DOC_CNT <![CDATA[ > ]]> 0, 1, null)) as totC1130Y	-- 과업중지
+            , COUNT(if(LEFT(p.MAKE_DAY, 4) = LEFT(#{paramStdDay}, 4) AND p.STEP_CD = '3011140' AND d.DAY_DOC_CNT <![CDATA[ > ]]> 0, 1, null)) as totC1140Y	-- 설계완료
+            , COUNT(if(LEFT(p.MAKE_DAY, 4) = LEFT(#{paramStdDay}, 4) AND p.STEP_CD = '3011150' AND d.DAY_DOC_CNT <![CDATA[ > ]]> 0, 1, null)) as totC1150Y	-- 설계변경
+            , COUNT(if(LEFT(p.MAKE_DAY, 4) = LEFT(#{paramStdDay}, 4) AND p.STEP_CD = '3011190' AND d.DAY_DOC_CNT <![CDATA[ > ]]> 0, 1, null)) as totC1190Y	-- 계약완료
+            , COUNT(if(LEFT(p.MAKE_DAY, 4) = LEFT(#{paramStdDay}, 4) AND p.STEP_CD = '3019900' AND d.DAY_DOC_CNT <![CDATA[ > ]]> 0, 1, null)) as totC9900Y	-- 퍠전
+
+        FROM KPROJTB p
+                 left join (
+                                SELECT    d.PROJECT_CD
+                                     , COUNT(*)  as DAY_DOC_CNT
+                                FROM KDAYDTB d
+                                WHERE d.PROJECT_CD is not NULL
+                                GROUP BY PROJECT_CD
+                            ) d ON  d.PROJECT_CD = p.PROJECT_CD
+
+        WHERE   LEFT(p.PROJECT_CD, 3)   !=  '100'
+          AND   p.MAKE_DAY  <![CDATA[ <= ]]>  #{paramStdDay}
+
+    </select>
+
+    <select id="countView_maxPages" resultType="java.util.HashMap">
+        SELECT
+            count(*)  as maxPages
+        FROM KPROJTB p
+            left join (
+                        SELECT    d.PROJECT_CD
+                            , COUNT(*)  as DAY_DOC_CNT
+                        FROM KDAYDTB d
+                        WHERE d.PROJECT_CD is not NULL
+                        GROUP BY PROJECT_CD
+                      ) d ON  d.PROJECT_CD = p.PROJECT_CD
+        WHERE 1 = 1
+          AND LEFT(p.PROJECT_CD, 3) != '100'
+          AND d.DAY_DOC_CNT <![CDATA[ > ]]> 0
+        <if test='paramStepCd != null and paramStepCd != ""'>
+          AND p.STEP_CD		=	 #{paramStepCd }
+        </if>
+        <if test='paramFg == "0"'>
+            AND p.MAKE_DAY  <![CDATA[ <= ]]>  #{paramStdDay }
+        </if>
+        <if test='paramFg == "1"'>
+            AND LEFT(p.MAKE_DAY, 4)  =  LEFT(#{paramStdDay }, 4)
+        </if>
+        <if test='paramSearchValue != null and paramSearchValue != ""'>
+            AND (
+            LOWER(p.PROJECT_NM) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
+            OR
+            LOWER(p.ORCU1_NM) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
+            OR
+            LOWER(p.EXPLAINS) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
+            )
+        </if>
+
+        ORDER BY p.PROJECT_CD ASC, p.MAKE_DAY DESC
+    </select>
+
+    <select id="countView_list" resultType="java.util.HashMap">
+        SELECT
+                  ROW_NUMBER() OVER (ORDER BY p.PROJECT_CD ASC, p.MAKE_DAY DESC) as rowNum
+                , p.PROJECT_CD      as  projectCd
+                , p.MAKE_DAY        as  makeDay
+                , p.ORDER_DAY       as  orderDay
+                , p.PROJECT_NM      as  projectNm
+                , p.SALES_CD        as  salesCd
+                , s.SALES_NM		as	salesNm
+                , IFNULL(d.DAY_DOC_CNT,0)		as	dayDocCnt
+
+                , p.LEVEL_CD		as	levelCd	    -- 프로젝트규모
+                , c1.COMM_NM		as	levelNm
+
+                , p.ORCU1_CD		as	orcu1Cd
+                , p.ORCU1_NM		as	orcu1Nm
+
+                , o.TOT_EST_QTY	    as	totEstQty
+                , o.TOT_EST_AMT	    as	totEstAmt
+                , o.TOT_ORD_QTY	    as	totOrdQty
+                , o.TOT_ORD_AMT	    as	totOrdAmt
+
+                , p.TYPE_CD		    as	typeCd	-- 발주유형
+                , c2.COMM_NM		as 	typeNm
+
+                , p.STEP_CD		    as	stepCd	-- 진행상태
+                , c3.COMM_NM		as	stepNm
+
+                , p.EXPLAINS		as	explains
+
+            FROM KPROJTB p
+
+                -- 프로젝트 디테일
+                left join (
+                            SELECT PROJECT_CD
+                                ,IFNULL(SUM(est_qty),0) as TOT_EST_QTY
+                                ,IFNULL(SUM(est_amt),0) as TOT_EST_AMT
+                                ,IFNULL(SUM(ord_qty),0) as TOT_ORD_QTY
+                                ,IFNULL(SUM(ord_amt),0) as TOT_ORD_AMT
+
+                                FROM KODERTB
+                                WHERE 1=1
+                                GROUP BY PROJECT_CD
+                            ) o ON o.PROJECT_CD = p.PROJECT_CD
+
+                left join (
+                            SELECT    d.PROJECT_CD
+                                    , COUNT(*)  as DAY_DOC_CNT
+                                    FROM KDAYDTB d
+                            WHERE d.PROJECT_CD is not NULL
+                            GROUP BY PROJECT_CD
+                          ) d ON  d.PROJECT_CD = p.PROJECT_CD
+
+                left join MSALESTB as s ON s.SALES_CD 	= 	p.SALES_CD	-- 영업담당
+                left join MCOMMTB as c1 ON c1.COMM_CD	=	p.LEVEL_CD	-- 프로젝트중요도
+                left join MCOMMTB as c2 ON c2.COMM_CD	=	p.TYPE_CD	-- 발주처유형
+                left join MCOMMTB as c3 ON c3.COMM_CD	=	p.STEP_CD	-- 진행상태구분
+
+            WHERE 1=1
+              AND LEFT(p.PROJECT_CD, 3) != '100'
+              AND d.DAY_DOC_CNT <![CDATA[ > ]]>  0
+            <if test='paramStepCd != null and paramStepCd != ""'>
+                AND p.STEP_CD		=	 #{paramStepCd }
+            </if>
+            <if test='paramFg == "0"'>
+              AND p.MAKE_DAY  <![CDATA[ <= ]]>  #{paramStdDay }
+            </if>
+            <if test='paramFg == "1"'>
+              AND LEFT(p.MAKE_DAY, 4)  =  LEFT(#{paramStdDay }, 4)
+            </if>
+            <if test='paramSearchValue != null and paramSearchValue != ""'>
+                AND (
+                LOWER(p.PROJECT_NM) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
+                OR
+                LOWER(p.ORCU1_NM) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
+                OR
+                LOWER(p.EXPLAINS) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
+                )
+            </if>
+
+            ORDER BY p.PROJECT_CD ASC, p.MAKE_DAY DESC
+
+            LIMIT #{paramPageRows} OFFSET #{paramStartRowNum }
+    </select>
+
+
+    <select id="docHistory_list" resultType="java.util.HashMap">
+        SELECT d.STD_DAY	    as	stdDay
+             , d.SALES_CD	    as	salesCd
+             , s.SALES_NM	    as	salesNm
+             , d.SEQ    	    as	seq
+             , d.SUBJECT		as	subject
+             , d.CONTENTS	    as	contents
+             , d.TYPE_CD		as	typeCd
+             , c.COMM_NM		as	typeNm
+             , e.IMAGE_FILE_NM  as  imageFileNm
+        FROM KDAYDTB d
+                 left join MSALESTB s ON s.SALES_CD = d.SALES_CD
+                 left join HEMPTB e ON e.EMP_CD = s.EMP_CD
+                 left join MCOMMTB c ON c.COMM_CD = d.TYPE_CD
+        WHERE d.PROJECT_CD = #{paramProjectCd }
+        ORDER BY d.STD_DAY DESC, d.SEQ DESC
+    </select>
+
+
+    <select id="auxPage1_list" resultType="java.util.HashMap">
+        SELECT 	c.COMM_CD	as	typeCd
+             , c.COMM_NM		as	typeNm
+             , IFNULL(t.targetAmt4, 0)	as	targetAmt4
+             , IFNULL(t.targetAmt3, 0)	as	targetAmt3
+             , IFNULL(t.targetAmt2, 0)	as	targetAmt2
+             , IFNULL(t.targetAmt1, 0)	as	targetAmt1
+             , IFNULL(t.targetAmt0, 0)	as	targetAmt0
+             , IFNULL(o.ordAmt4, 0)		as	ordAmt4
+             , IFNULL(o.ordAmt3, 0)		as	ordAmt3
+             , IFNULL(o.ordAmt2, 0)		as	ordAmt2
+             , IFNULL(o.ordAmt1, 0)		as	ordAmt1
+             , IFNULL(o.ordAmt0, 0)		as	ordAmt0
+        FROM MCOMMTB c
+                 left join (
+            SELECT
+                DIV_CD
+                 , SUM(CASE WHEN LEFT(STD_YYMM, 4) = #{paramEyear}-4 THEN TARGET_AMT ELSE 0 END) AS targetAmt4
+                 , SUM(CASE WHEN LEFT(STD_YYMM, 4) = #{paramEyear}-3 THEN TARGET_AMT ELSE 0 END) AS targetAmt3
+                 , SUM(CASE WHEN LEFT(STD_YYMM, 4) = #{paramEyear}-2 THEN TARGET_AMT ELSE 0 END) AS targetAmt2
+                 , SUM(CASE WHEN LEFT(STD_YYMM, 4) = #{paramEyear}-1 THEN TARGET_AMT ELSE 0 END) AS targetAmt1
+                 , SUM(CASE WHEN LEFT(STD_YYMM, 4) = #{paramEyear}   THEN TARGET_AMT ELSE 0 END) AS targetAmt0
+            FROM KORTGTB
+            WHERE LEFT(STD_YYMM, 4) BETWEEN #{paramSyear} AND #{paramEyear}
+            GROUP BY DIV_CD
+        ) t ON t.DIV_CD = c.COMM_CD
+
+                 left join (
+            SELECT
+                p.TYPE_CD
+                 , SUM(CASE WHEN LEFT(o_inner.ORD_DAY, 4) = #{paramEyear}-4 THEN o_inner.ORD_AMT ELSE 0 END) AS ordAmt4
+                 , SUM(CASE WHEN LEFT(o_inner.ORD_DAY, 4) = #{paramEyear}-3 THEN o_inner.ORD_AMT ELSE 0 END) AS ordAmt3
+                 , SUM(CASE WHEN LEFT(o_inner.ORD_DAY, 4) = #{paramEyear}-2 THEN o_inner.ORD_AMT ELSE 0 END) AS ordAmt2
+                 , SUM(CASE WHEN LEFT(o_inner.ORD_DAY, 4) = #{paramEyear}-1 THEN o_inner.ORD_AMT ELSE 0 END) AS ordAmt1
+                 , SUM(CASE WHEN LEFT(o_inner.ORD_DAY, 4) = #{paramEyear}   THEN o_inner.ORD_AMT ELSE 0 END) AS ordAmt0
+            FROM KODERTB o_inner
+                     left join KPROJTB p ON p.PROJECT_CD  =	o_inner.PROJECT_CD
+            WHERE LEFT(o_inner.ORD_DAY, 4) BETWEEN #{paramSyear} AND #{paramEyear}
+            GROUP BY p.TYPE_CD
+        ) o ON o.TYPE_CD = c.COMM_CD
+
+
+        where LEFT(c.COMM_CD, 3) = '103'
+          AND RIGHT(c.COMM_CD, 4) != '0000'
+    </select>
+
+   <select id="auxPage2_project_list" resultType="java.util.HashMap">
+       SELECT d.STD_DAY		as	stdDay
+            , d.PROJECT_CD	as	projectCd
+            , p.PROJECT_NM	as	projectNm
+            , count(*)      as  dayDocCnt
+       FROM KDAYDTB d
+                left join KPROJTB p ON p.PROJECT_CD = d.PROJECT_CD
+       WHERE d.STD_DAY BETWEEN
+                 DATE_FORMAT(DATE_SUB(STR_TO_DATE(#{paramStdDay}, '%Y%m%d'), INTERVAL 7 DAY), '%Y%m%d')
+                 AND #{paramStdDay}
+         AND left(d.PROJECT_CD, 3) != '100'
+         AND p.PROJECT_NM is not NULL
+
+       GROUP BY d.STD_DAY, d.PROJECT_CD
+       ORDER BY d.STD_DAY desc
+    </select>
+
+    <select id="auxPage2_sales_list" resultType="java.util.HashMap">
+       SELECT d.STD_DAY		as	stdDay
+            , d.SALES_CD	as	salesCd
+            , s.SALES_NM	as	salesNm
+            , d.SUBJECT		as	subject
+            , count(*)      as  dayDocCnt
+       FROM KDAYDTB d
+                left join MSALESTB s ON s.SALES_CD = d.SALES_CD
+       WHERE d.STD_DAY BETWEEN
+                 DATE_FORMAT(DATE_SUB(STR_TO_DATE(#{paramStdDay}, '%Y%m%d'), INTERVAL 7 DAY), '%Y%m%d')
+                 AND #{paramStdDay}
+         AND left(d.PROJECT_CD, 3) != '100'
+
+       GROUP BY d.STD_DAY, d.SALES_CD
+       ORDER BY d.STD_DAY desc
+    </select>
+
+    <select id="auxPage2_dayDoc_list" resultType="java.util.HashMap">
+       SELECT d.STD_DAY		as	stdDay
+            , d.SALES_CD	as	salesCd
+            , s.SALES_NM	as	salesNm
+            , d.SEQ     	as	seq
+            , d.SUBJECT		as	subject
+            , d.PROJECT_CD	as	projectCd
+            , p.PROJECT_NM	as	projectNm
+            , d.TYPE_CD		as	typeCd
+            , c.COMM_NM		as	typeNm
+       FROM KDAYDTB d
+                left join MSALESTB s ON s.SALES_CD = d.SALES_CD
+                left join KPROJTB p ON p.PROJECT_CD = d.PROJECT_CD
+                left join MCOMMTB c ON c.COMM_CD = d.TYPE_CD
+       WHERE d.STD_DAY      =   #{paramStdDay}
+         AND d.SALES_CD     =   #{paramSalesCd}
+       ORDER BY d.STD_DAY desc, d.SEQ desc
+    </select>
+
+
+    <select id="subDayReply_list" resultType="java.util.HashMap">
+       SELECT r.STD_DAY		as	stdDay
+            , r.SALES_CD	as	salesCd
+            , s.SALES_NM	as	salesNm
+            , r.SEQ     	as	seq
+            , r.NO       	as	no
+            , r.EMP_CD		as	empCd
+            , e.EMP_NM  	as	empNm
+            , r.REPLY   	as	reply
+            , r.RATING		as	rating
+            , DATE_FORMAT(r.REG_DATE, '%Y-%m-%d %H:%i:%s') as regDate
+       FROM KDAYRTB r
+                left join MSALESTB s ON s.SALES_CD = r.SALES_CD
+                left join HEMPTB e ON e.EMP_CD = r.EMP_CD
+
+       WHERE r.STD_DAY      =   #{paramStdDay}
+         AND r.SALES_CD     =   #{paramSalesCd}
+         AND r.SEQ          =   #{paramSeq}
+       ORDER BY r.SEQ desc
+    </select>
+
+
+    <select id="subDayReply_select" resultType="java.util.HashMap">
+       SELECT r.STD_DAY		as	stdDay
+            , r.SALES_CD	as	salesCd
+            , s.SALES_NM	as	salesNm
+            , r.SEQ     	as	seq
+            , r.NO       	as	no
+            , r.EMP_CD		as	empCd
+            , e.EMP_NM  	as	empNm
+            , r.REPLY   	as	reply
+            , r.RATING		as	rating
+            , r.REG_DATE	as	regDate
+       FROM KDAYRTB r
+                left join MSALESTB s ON s.SALES_CD = r.SALES_CD
+                left join HEMPTB e ON e.EMP_CD = r.EMP_CD
+
+       WHERE r.STD_DAY      =   #{paramStdDay}
+         AND r.SALES_CD     =   #{paramSalesCd}
+         AND r.SEQ          =   #{paramSeq}
+         AND r.NO           =   #{paramNo}
+    </select>
+
+
+    <insert id="subDayReply_insert" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            INSERT INTO KDAYRTB
+                (
+                      STD_DAY
+                    , SALES_CD
+                    , SEQ
+                    , NO
+                    , EMP_CD
+                    , REPLY
+                    , RATING
+                    , REG_DATE
+                ) VALUES (
+                      #{item.stdDay}
+                    , #{item.salesCd}
+                    , #{item.seq}
+                    , #{item.no}
+                    , #{item.empCd}
+                    , #{item.reply}
+                    , #{item.rating}
+                    , NOW()
+                )
+        </foreach>
+    </insert>
+
+    <update id="subDayReply_update" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            UPDATE KDAYRTB
+                SET
+                      REPLY         =   #{item.reply}
+                    , RATING        =   #{item.rating}
+
+            WHERE STD_DAY       =   #{item.stdDay}
+              AND SALES_CD      =   #{item.salesCd}
+              AND SEQ           =   #{item.seq}
+              AND NO            =   #{item.no}
+        </foreach>
+    </update>
+
+
+    <delete id="subDayReply_delete" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            DELETE FROM KDAYRTB
+                WHERE STD_DAY       =   #{item.stdDay}
+                  AND SALES_CD      =   #{item.salesCd}
+                  AND SEQ           =   #{item.seq}
+                  AND NO            =   #{item.no}
+        </foreach>
+    </delete>
+
+</mapper>
