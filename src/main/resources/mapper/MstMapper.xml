@@ -30,6 +30,25 @@
 
     </select>
 
+    <select id="helpCust_list" resultType="java.util.HashMap">
+        SELECT
+               a.CUST_CD           as  custCd
+             , a.CUST_NM           as  custNm
+             , a.CUST_BUSIN_NM     as  custBusinNm
+             , a.CUST_BUSIN_NO     as  custBusinNo
+             , a.CUST_OWNER        as  custOwner
+        FROM MCUSTTB a
+        WHERE 1=1
+          AND a.USE_YN =  #{paramUseYn }
+            <if test='paramValueNm != null and paramValueNm != ""'>
+                AND (   a.CUST_NM LIKE CONCAT( '%', #{paramValueNm }, '%' )
+                    OR  a.CUST_BUSIN_NM LIKE CONCAT( '%', #{paramValueNm }, '%')
+                    OR  a.CUST_CD LIKE CONCAT( '%', #{paramValueNm }, '%')
+                    )
+            </if>
+
+    </select>
+
     <!--    기준인사정보 list -->
     <select id="mst1010_list" resultType="java.util.HashMap">
         SELECT
@@ -816,6 +835,7 @@
              , a.REG_ID         as  regId
              , a.UPDATE_DATE    as  updateDate
              , a.UPDATE_ID      as  updateId
+             , 'R'              as  iuD
         FROM MCUSTSTB as a
         WHERE a.CUST_CD   =   #{paramCustCd }
           AND a.CUSTS_CD  !=  "00000000"
