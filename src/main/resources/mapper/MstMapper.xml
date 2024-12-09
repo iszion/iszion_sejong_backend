@@ -812,6 +812,7 @@
     <select id="mst2030_list" resultType="java.util.HashMap">
         SELECT
                a.CUST_CD        as  custCd
+             , a.CUST_CD        as  oldCustCd
              , a.CUSTS_CD       as  custsCd
              , a.CUSTS_NM       as  custsNm
              , a.USE_YN         as  useYn
@@ -820,6 +821,7 @@
              , a.REG_ID         as  regId
              , a.UPDATE_DATE    as  updateDate
              , a.UPDATE_ID      as  updateId
+             , 'U'              as  iuD
         FROM MCUSTSTB as a
         WHERE a.CUSTS_CD = "00000000"
     </select>
@@ -828,6 +830,7 @@
         SELECT
                a.CUST_CD        as  custCd
              , a.CUSTS_CD       as  custsCd
+             , a.CUSTS_CD       as  oldCustsCd
              , a.CUSTS_NM       as  custsNm
              , a.USE_YN         as  useYn
              , a.EXPLAINS       as  explains
@@ -841,6 +844,69 @@
           AND a.CUSTS_CD  !=  "00000000"
 
     </select>
+
+    <insert id="mst2030_group_insert" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            INSERT INTO MCUSTSTB
+                (
+                      CUST_CD
+                    , CUSTS_CD
+                    , CUSTS_NM
+                    , USE_YN
+                    , EXPLAINS
+                    , REG_DATE
+                    , REG_ID
+                    , UPDATE_DATE
+                    , UPDATE_ID
+                ) VALUES (
+                      #{item.custCd }
+                    , '00000000'
+                    , #{item.custsNm }
+                    , 'Y'
+                    , #{item.explains }
+                    , now()
+                    , #{userId }
+                    , now()
+                    , #{userId }
+                )
+        </foreach>
+    </insert>
+
+    <update id="mst2030_group_update" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            UPDATE MCUSTSTB
+                SET
+                      CUST_CD           =   #{item.custCd }
+                    , CUSTS_CD          =   #{item.custsCd }
+                    , CUSTS_NM          =   #{item.custsNm }
+                    , USE_YN            =   'Y'
+                    , EXPLAINS          =   #{item.explains }
+                    , UPDATE_DATE       =   now()
+                    , UPDATE_ID         =   #{userId}
+
+            WHERE CUST_CD               = #{item.oldCustCd }
+              AND CUSTS_CD              = '00000000'
+        </foreach>
+    </update>
+
+    <update id="mst2030_group_all_update" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            UPDATE MCUSTSTB
+                SET
+                      CUST_CD           =   #{item.custCd }
+                    , UPDATE_DATE       =   now()
+                    , UPDATE_ID         =   #{userId}
+
+            WHERE CUST_CD               = #{item.oldCustCd }
+        </foreach>
+    </update>
+
+    <delete id="mst2030_group_delete" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            DELETE FROM MCUSTSTB
+             WHERE CUST_CD     	=   #{item.custCd }
+        </foreach>
+    </delete>
 
     <insert id="mst2030_insert" parameterType="java.util.Map">
         <foreach collection="list1" item="item" separator=";">
@@ -856,15 +922,15 @@
                     , UPDATE_DATE
                     , UPDATE_ID
                 ) VALUES (
-                      #{item.cust_cd }
-                    , '00000000'
-                    , #{item.custs_nm }
+                      #{item.custCd }
+                    , #{item.custsCd }
+                    , #{item.custsNm }
                     , 'Y'
                     , #{item.explains }
                     , now()
-                    , #{sessionId }
+                    , #{userId }
                     , now()
-                    , #{sessionId }
+                    , #{userId }
                 )
         </foreach>
     </insert>
@@ -873,22 +939,23 @@
         <foreach collection="list1" item="item" separator=";">
             UPDATE MCUSTSTB
                 SET
-                      CUST_CD           =   #{item.custCd }
-                    , CUSTS_CD          =   '00000000'
+                      CUSTS_CD          =   #{item.custsCd }
                     , CUSTS_NM          =   #{item.custsNm }
-                    , USE_YN            =   'Y'
+                    , USE_YN            =    #{item.useYn }
                     , EXPLAINS          =   #{item.explains }
                     , UPDATE_DATE       =   now()
-                    , UPDATE_ID         =   #{sessionId }
+                    , UPDATE_ID         =   #{userId}
 
-            WHERE CUST_CD               = #{item.oldCustCd }
+            WHERE CUST_CD               = #{item.custCd }
+              AND CUSTS_CD              =  #{item.oldCustsCd }
         </foreach>
     </update>
 
     <delete id="mst2030_delete" parameterType="java.util.Map">
         <foreach collection="list1" item="item" separator=";">
             DELETE FROM MCUSTSTB
-            WHERE CUST_CD     	=   #{item.oldCustCd }
+             WHERE CUST_CD     	=   #{item.custCd }
+               AND CUSTS_CD     =  #{item.custsCd }
         </foreach>
     </delete>
 
@@ -896,18 +963,18 @@
     <!--    공통코드 list -->
     <select id="mst5090_list" resultType="java.util.HashMap">
         SELECT
-            LEFT(a.COMM_CD,3)    as  commCd1
-                , LEFT(a.COMM_CD,3)    as  oldCommCd1
-                , a.COMM_NM            as  commNm
-                , count(*) - 1   		as  cnt
-                , a.COMM_ETC           as  commEtc
-                , a.EXPLAINS           as  explains
-                , a.USE_YN             as  useYn
-                , a.REG_DATE           as  regDate
-                , a.REG_ID             as  regId
-                , a.UPDATE_DATE        as  updateDate
-                , a.UPDATE_ID          as  updateId
-                , 'U'                  as  iuD
+                  LEFT(a.COMM_CD,3)     as  commCd1
+                , LEFT(a.COMM_CD,3)     as  oldCommCd1
+                , a.COMM_NM             as  commNm
+                , count(*) - 1   	    as  cnt
+                , a.COMM_ETC            as  commEtc
+                , a.EXPLAINS            as  explains
+                , a.USE_YN              as  useYn
+                , a.REG_DATE            as  regDate
+                , a.REG_ID              as  regId
+                , a.UPDATE_DATE         as  updateDate
+                , a.UPDATE_ID           as  updateId
+                , 'U'                   as  iuD
         FROM MCOMMTB a
         GROUP BY LEFT(COMM_CD, 3)
     </select>
@@ -964,7 +1031,7 @@
         <foreach collection="list1" item="item" separator=";">
             UPDATE MCOMMTB
             SET
-            COMM_CD         =   CONCAT(#{item.commCd1}, '0000')
+                COMM_CD         =   CONCAT(#{item.commCd1}, '0000')
             ,   COMM_NM         =   #{item.commNm}
             ,   COMM_ETC        =   #{item.commEtc}
             ,   EXPLAINS        =   #{item.explains}
@@ -1031,7 +1098,7 @@
         <foreach collection="list1" item="item" separator=";">
             UPDATE MCOMMTB
             SET
-            COMM_CD         =   CONCAT(#{item.commCd1}, #{item.commCd2})
+                COMM_CD         =   CONCAT(#{item.commCd1}, #{item.commCd2})
             ,   COMM_NM         =   #{item.commNm}
             ,   COMM_ETC        =   #{item.commEtc}
             ,   EXPLAINS        =   #{item.explains}
