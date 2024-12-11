@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.iszion.api.sal.dao.SalDAO">
+
+    <!-- ###  매입전표관리    ################################ -->
+    <select id="sal1010_list_event" resultType="java.util.HashMap">
+        SELECT
+                i.BUY_DAY               as  eventDay
+          FROM SBUYHTB i
+         WHERE 1=1
+            AND SUBSTRING(i.BUY_DAY, 1, 4) =  #{paramYear}
+            AND SUBSTRING(i.BUY_DAY, 5, 2) = #{paramMonth}
+         GROUP BY i.BUY_DAY
+
+    </select>
+
+    <select id="sal1010_list" resultType="java.util.HashMap">
+        SELECT
+               ih.BUY_DAY           as  buyDay
+             , ih.SEQ               as  seq
+             , ih.CUST_CD           as  custCd
+             , ih.DIV_CD            as  divCd
+             , cu.CUST_NM           as  custNm
+             , id.TOT_SEQ           as  totSeq
+             , id.TOT_QTY           as  totQty
+             , ih.REMARKS           as  remarks
+             , ih.REG_DATE          as  regDate
+             , ih.REG_ID            as  regId
+             , ih.UPDATE_DATE       as  updateDate
+             , ih.UPDATE_ID         as  updateId
+        FROM SBUYHTB as ih
+             -- 입고 아이템 체크
+             left outer join (
+                                SELECT SEQ, COUNT(*) as TOT_SEQ, SUM(QTY) as TOT_QTY
+                                    FROM SBUYDTB where BUY_DAY   = #{paramBuyDay }
+                                    GROUP BY SEQ
+                            ) id ON id.SEQ = ih.SEQ
+
+            -- 거래처코드
+             left outer join MCUSTTB as cu ON cu.CUST_CD  = ih.CUST_CD
+
+        where 1=1
+          AND ih.BUY_DAY     =   #{paramBuyDay }
+        order by ih.BUY_DAY desc, ih.SEQ desc
+
+    </select>
+
+    <select id="sal1010_select" resultType="java.util.HashMap">
+        SELECT
+               ih.BUY_DAY           as  buyDay
+             , ih.SEQ               as  seq
+             , ih.CUST_CD           as  custCd
+             , ih.DIV_CD            as  divCd
+             , cu.CUST_NM           as  custNm
+             , ih.REMARKS           as  remarks
+             , ih.REG_DATE          as  regDate
+             , ih.REG_ID            as  regId
+             , ih.UPDATE_DATE       as  updateDate
+             , ih.UPDATE_ID         as  updateId
+        FROM SBUYHTB as ih
+            -- 거래처코드
+             left outer join MCUSTTB as cu ON cu.CUST_CD  = ih.CUST_CD
+
+        where 1=1
+          AND ih.BUY_DAY     =   #{paramBuyDay }
+
+    </select>
+
+    <select id="sal1010_select_list" resultType="java.util.HashMap">
+        SELECT
+               id.BUY_DAY           as  buyDay
+             , id.SEQ               as  seq
+             , id.CNT               as  cnt
+             , id.CUST_CD           as  custCd
+             , id.DIV_CD            as  divCd
+             , id.BUY_FG            as  buyFg
+             , c1.COMM_NM           as  buyFgNm
+             , id.PROD_CD           as  prodCd
+             , pd.PROD_NM           as  prodNm
+             , id.QTY               as  qty
+             , id.PRICE             as  price
+             , id.AMT               as  amt
+             , id.BUY_YUL           as  buyYul
+             , id.REMARKS           as  remarks
+             , id.REG_DATE          as  regDate
+             , id.REG_ID            as  regId
+             , id.UPDATE_DATE       as  updateDate
+             , id.UPDATE_ID         as  updateId
+        FROM SBUYDTB as id
+            -- 거래처코드
+             left outer join MPRODTB as pd ON pd.PROD_CD  = id.PROD_CD
+             left outer join MCOMMTB as c1 ON c1.COMM_CD  = id.BUY_FG
+
+        where 1=1
+          AND id.BUY_DAY    =   #{paramBuyDay }
+          AND id.SEQ        =   #{paramSeq }
+
+    </select>
+
+    <select id="sal1010_maxSeqCheck" resultType="java.util.HashMap">
+        SELECT IFNULL( LPAD(CAST(MAX(SEQ) AS UNSIGNED) + 1, 4, '0'), '0001') as maxSeq
+         FROM SBUYHTB
+        WHERE BUY_DAY   =   #{paramBuyDay }
+    </select>
+
+</mapper>

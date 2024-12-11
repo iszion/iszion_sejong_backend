@@ -37,15 +37,43 @@
              , a.CUST_BUSIN_NM     as  custBusinNm
              , a.CUST_BUSIN_NO     as  custBusinNo
              , a.CUST_OWNER        as  custOwner
+             , a.USE_YN            as  useYn
         FROM MCUSTTB a
         WHERE 1=1
-          AND a.USE_YN =  #{paramUseYn }
+            <if test='paramAll == "N"'>
+               AND a.USE_YN =  #{paramAll}
+            </if>
             <if test='paramValueNm != null and paramValueNm != ""'>
                 AND (   a.CUST_NM LIKE CONCAT( '%', #{paramValueNm }, '%' )
                     OR  a.CUST_BUSIN_NM LIKE CONCAT( '%', #{paramValueNm }, '%')
                     OR  a.CUST_CD LIKE CONCAT( '%', #{paramValueNm }, '%')
                     )
             </if>
+
+    </select>
+
+
+    <select id="helpProd_list" resultType="java.util.HashMap">
+        SELECT
+              p.PROD_CD    as  prodCd
+            , p.PROD_NM    as  prodNm
+            , p.AUTHOR_NM  as  authorNm
+            , p.I_PRICE    as  iPrice
+            , p.O_PRICE    as  oPrice
+            , p.S_PRICE    as  sPrice
+            , p.PUB_DATE   as  pubDate
+            , p.USE_YN     as  useYn
+        FROM MPRODTB p
+        WHERE 1=1
+            <if test='paramAll == "N"'>
+                AND p.USE_YN =  #{paramAll}
+            </if>
+            <if test='paramValueNm != null and paramValueNm != ""'>
+                AND (   p.PROD_NM LIKE CONCAT( '%', #{paramValueNm }, '%' )
+                    OR  p.PROD_CD LIKE CONCAT( '%', #{paramValueNm }, '%')
+                    )
+            </if>
+        ORDER BY p.PUB_DATE DESC
 
     </select>
 
@@ -261,19 +289,19 @@
     <select id="mst2010_maxPages" resultType="java.util.HashMap">
         SELECT
             count(*)  as maxPages
-          FROM MITEMTB  d
+          FROM MPRODTB  d
          WHERE 1 = 1
-        <if test='paramItemDiv != null and paramItemDiv != ""'>
-            AND d.ITEM_DIV = #{paramItemDiv }
+        <if test='paramProdDiv != null and paramProdDiv != ""'>
+            AND d.PROD_DIV = #{paramProdDiv }
         </if>
-        <if test='paramItemFg != null and paramItemFg != ""'>
-            AND d.ITEM_FG = #{paramItemFg }
+        <if test='paramProdFg != null and paramProdFg != ""'>
+            AND d.PROD_FG = #{paramProdFg }
         </if>
         <if test='paramSearchValue != null and paramSearchValue != ""'>
             AND (
-            LOWER(d.ITEM_NM) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
+            LOWER(d.PROD_NM) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
             OR
-            LOWER(d.ITEM_CD) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
+            LOWER(d.PROD_CD) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
             )
         </if>
 
@@ -284,14 +312,14 @@
     <select id="mst2010_list" resultType="java.util.HashMap">
         SELECT
                   ROW_NUMBER() OVER (ORDER BY d.MAKE_DATE desc) as rowNum
-                , d.ITEM_CD				as	itemCd
-                , d.ITEM_DIV			as	itemDiv
-                , c1.COMM_NM			as	itemDivNm
-                , d.ITEM_NM				as	itemNm
+                , d.PROD_CD				as	prodCd
+                , d.PROD_DIV			as	prodDiv
+                , c1.COMM_NM			as	prodDivNm
+                , d.PROD_NM				as	prodNm
                 , d.AUTHOR_NM			as	authorNm
-                , d.ITEM_FG				as	itemFg
-                , c2.COMM_NM			as	itemFgNm
-                , d.ITEM_CL				as	itemCl
+                , d.PROD_FG				as	prodFg
+                , c2.COMM_NM			as	prodFgNm
+                , d.PROD_CL				as	prodCl
                 , d.ISBN				as	isbn
                 , d.I_PRICE				as	iPrice
                 , d.O_PRICE				as	oPrice
@@ -309,7 +337,7 @@
                 , d.COPYRIGHT_EDAY		as	copyrightEday
                 , d.AGENT_CD			as	agentCd
                 , ag.AGENT_NM			as	agentNm
-                , d.BUNDLE_ITEM_CD		as	bundleItemCd
+                , d.BUNDLE_PROD_CD		as	bundleProdCd
                 , d.MANAGER_NM			as	managerNm
                 , d.REMARKS				as	remarks
                 , d.MAKE_DATE			as	makeDate
@@ -319,23 +347,23 @@
                 , d.UPDATE_DATE			as	updateDate
                 , d.UPDATE_ID			as	updateId
 
-        FROM MITEMTB d
+        FROM MPRODTB d
             left join MAGENTTB ag ON ag.AGENT_CD = d.AGENT_CD
-            left join MCOMMTB c1 ON c1.COMM_CD = d.ITEM_DIV
-            left join MCOMMTB c2 ON c2.COMM_CD = d.ITEM_FG
+            left join MCOMMTB c1 ON c1.COMM_CD = d.PROD_DIV
+            left join MCOMMTB c2 ON c2.COMM_CD = d.PROD_FG
 
         WHERE 1 = 1
-        <if test='paramItemDiv != null and paramItemDiv != ""'>
-            AND d.ITEM_DIV = #{paramItemDiv }
+        <if test='paramProdDiv != null and paramProdDiv != ""'>
+            AND d.PROD_DIV = #{paramProdDiv }
         </if>
-        <if test='paramItemFg != null and paramItemFg != ""'>
-            AND d.ITEM_FG = #{paramItemFg }
+        <if test='paramProdFg != null and paramProdFg != ""'>
+            AND d.PROD_FG = #{paramProdFg }
         </if>
         <if test='paramSearchValue != null and paramSearchValue != ""'>
             AND (
-            LOWER(d.ITEM_NM) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
+            LOWER(d.PROD_NM) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
             OR
-            LOWER(d.ITEM_CD) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
+            LOWER(d.PROD_CD) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
             )
         </if>
         ORDER BY d.MAKE_DATE DESC
@@ -344,15 +372,15 @@
 
     <select id="mst2010_select" resultType="java.util.HashMap">
         SELECT
-                  d.ITEM_CD				as	itemCd
-                , d.ITEM_CD  			as	oldItemCd
-                , d.ITEM_DIV			as	itemDiv
-                , c1.COMM_NM			as	itemDivNm
-                , d.ITEM_NM				as	itemNm
+                  d.PROD_CD				as	prodCd
+                , d.PROD_CD  			as	oldProdCd
+                , d.PROD_DIV			as	prodDiv
+                , c1.COMM_NM			as	prodDivNm
+                , d.PROD_NM				as	prodNm
                 , d.AUTHOR_NM			as	authorNm
-                , d.ITEM_FG				as	itemFg
-                , c2.COMM_NM			as	itemFgNm
-                , d.ITEM_CL				as	itemCl
+                , d.PROD_FG				as	prodFg
+                , c2.COMM_NM			as	prodFgNm
+                , d.PROD_CL				as	prodCl
                 , d.ISBN				as	isbn
                 , d.I_PRICE				as	iPrice
                 , d.O_PRICE				as	oPrice
@@ -370,7 +398,7 @@
                 , d.COPYRIGHT_EDAY		as	copyrightEday
                 , d.AGENT_CD			as	agentCd
                 , ag.AGENT_NM			as	agentNm
-                , d.BUNDLE_ITEM_CD		as	bundleItemCd
+                , d.BUNDLE_PROD_CD		as	bundleProdCd
                 , d.MANAGER_NM			as	managerNm
                 , d.REMARKS				as	remarks
                 , d.MAKE_DATE			as	makeDate
@@ -382,32 +410,32 @@
 
                 , 'U'                   as  iuD
 
-        FROM MITEMTB d
+        FROM MPRODTB d
              left join MAGENTTB ag ON ag.AGENT_CD = d.AGENT_CD
-             left join MCOMMTB c1 ON c1.COMM_CD = d.ITEM_DIV
-             left join MCOMMTB c2 ON c2.COMM_CD = d.ITEM_FG
-        WHERE d.ITEM_CD     = 	#{paramItemCd}
+             left join MCOMMTB c1 ON c1.COMM_CD = d.PROD_DIV
+             left join MCOMMTB c2 ON c2.COMM_CD = d.PROD_FG
+        WHERE d.PROD_CD     = 	#{paramProdCd}
 
     </select>
 
     <select id="mst2010_max_codeCheck" resultType="java.util.HashMap">
-        select IFNULL(CAST(MAX(ITEM_CD) as unsigned) + 1, '1001') as maxCd
-          FROM MITEMTB
-          WHERE ITEM_CD <![CDATA[ < ]]> 8000;
+        select IFNULL(CAST(MAX(PROD_CD) as unsigned) + 1, '1001') as maxCd
+          FROM MPRODTB
+          WHERE PROD_CD <![CDATA[ < ]]> 8000;
 
     </select>
 
 
     <insert id="mst2010_insert" parameterType="java.util.Map">
         <foreach collection="list1" item="item" separator=";">
-            INSERT INTO MITEMTB
+            INSERT INTO MPRODTB
                 (
-                      ITEM_CD
-                    , ITEM_DIV
-                    , ITEM_NM
+                      PROD_CD
+                    , PROD_DIV
+                    , PROD_NM
                     , AUTHOR_NM
-                    , ITEM_FG
-                    , ITEM_CL
+                    , PROD_FG
+                    , PROD_CL
                     , ISBN
                     , I_PRICE
                     , O_PRICE
@@ -424,7 +452,7 @@
                     , COPYRIGHT_SDAY
                     , COPYRIGHT_EDAY
                     , AGENT_CD
-                    , BUNDLE_ITEM_CD
+                    , BUNDLE_PROD_CD
                     , MANAGER_NM
                     , REMARKS
                     , MAKE_DATE
@@ -434,12 +462,12 @@
                     , UPDATE_DATE
                     , UPDATE_ID
                 ) VALUES (
-                      #{item.itemCd }
-                    , #{item.itemDiv }
-                    , #{item.itemNm }
+                      #{item.prodCd }
+                    , #{item.prodDiv }
+                    , #{item.prodNm }
                     , #{item.authorNm }
-                    , #{item.itemFg }
-                    , #{item.itemCl }
+                    , #{item.prodFg }
+                    , #{item.prodCl }
                     , #{item.isbn }
                     , #{item.iPrice }
                     , #{item.oPrice }
@@ -456,7 +484,7 @@
                     , #{item.copyrightSday }
                     , #{item.copyrightEday }
                     , #{item.agentCd }
-                    , #{item.bundleItemCd }
+                    , #{item.bundleProdCd }
                     , #{item.managerNm }
                     , #{item.remarks }
                     , #{item.makeDate }
@@ -471,14 +499,14 @@
 
     <update id="mst2010_update" parameterType="java.util.Map">
         <foreach collection="list1" item="item" separator=";">
-            UPDATE MITEMTB
+            UPDATE MPRODTB
                 SET
-                      ITEM_CD        =   #{item.itemCd }
-                    , ITEM_DIV       =   #{item.itemDiv }
-                    , ITEM_NM        =   #{item.itemNm }
+                      PROD_CD        =   #{item.prodCd }
+                    , PROD_DIV       =   #{item.prodDiv }
+                    , PROD_NM        =   #{item.prodNm }
                     , AUTHOR_NM      =   #{item.authorNm }
-                    , ITEM_FG        =   #{item.itemFg }
-                    , ITEM_CL        =   #{item.itemCl }
+                    , PROD_FG        =   #{item.prodFg }
+                    , PROD_CL        =   #{item.prodCl }
                     , ISBN           =   #{item.isbn }
                     , I_PRICE        =   #{item.iPrice }
                     , O_PRICE        =   #{item.oPrice }
@@ -495,7 +523,7 @@
                     , COPYRIGHT_SDAY =   #{item.copyrightSday }
                     , COPYRIGHT_EDAY =   #{item.copyrightEday }
                     , AGENT_CD       =   #{item.agentCd }
-                    , BUNDLE_ITEM_CD =   #{item.bundleItemCd }
+                    , BUNDLE_PROD_CD =   #{item.bundleProdCd }
                     , MANAGER_NM	 =   #{item.managerNm }
                     , REMARKS        =   #{item.remarks }
                     , MAKE_DATE      =   #{item.makeDate }
@@ -503,14 +531,14 @@
                     , UPDATE_DATE    =   now()
                     , UPDATE_ID      =   #{userId }
 
-            WHERE ITEM_CD       =   #{item.oldItemCd}
+            WHERE PROD_CD       =   #{item.oldProdCd}
         </foreach>
     </update>
 
     <delete id="mst2010_delete" parameterType="java.util.Map">
         <foreach collection="list1" item="item" separator=";">
-            DELETE FROM MITEMTB
-            WHERE ITEM_CD     	=   #{item.oldItemCd }
+            DELETE FROM MPRODTB
+            WHERE PROD_CD     	=   #{item.oldProdCd }
         </foreach>
     </delete>
 
