@@ -50,4 +50,9 @@ public class SysServiceImpl implements SysService {
     public int deleteQry(String queryId, Object searchObj) throws Exception {
         return sysDAO.deleteQry(queryId, searchObj);
     }
+
+    @Override
+    public List<?> selectQryList1(String queryId, Object searchObj, String dbType) throws Exception {
+        return sysDAO.selectQryList1(queryId, searchObj, dbType);
+    }
 }

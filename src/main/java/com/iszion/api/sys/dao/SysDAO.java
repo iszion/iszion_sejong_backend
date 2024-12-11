@@ -1,7 +1,9 @@
 package com.iszion.api.sys.dao;
 
+import org.apache.ibatis.annotations.Mapper;
 import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Repository;
 
 import java.util.HashMap;
@@ -12,6 +14,10 @@ public class SysDAO {
 
     @Autowired
     private SqlSessionTemplate sqlSessionTemplate;
+
+    @Autowired
+    @Qualifier(value = "sejongSqlSessionTemplate") // 같은 bean이 2개 이상 존재할 시 어떤 bean을 사용할 건지 지정해야함.
+    private SqlSessionTemplate sqlSession2;
 
     /**
      * 조회 한건
@@ -76,5 +82,10 @@ public class SysDAO {
      */
     public int deleteQry(String queryId,Object searchObj) throws Exception {
         return sqlSessionTemplate.delete(queryId, searchObj);
+    }
+
+    public List<?> selectQryList1(String queryId, Object searchObj, String dbType) throws Exception {
+        return sqlSessionTemplate.selectList(queryId, null);
+
     }
 }

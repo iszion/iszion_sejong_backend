@@ -42,7 +42,7 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<?> logout(@Validated UserRequestDto.Logout logout, Errors errors) {
+    public ResponseEntity<?> logout(@Validated @RequestBody UserRequestDto.Logout logout, @RequestHeader("Authorization") String token, Errors errors) {
         // validation check
         if (errors.hasErrors()) {
             return response.invalidFields(Helper.refineErrors(errors));
