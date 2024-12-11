@@ -91,10 +91,15 @@ public class AuthServiceImpl implements AuthService {
 
             // 3. 인증 정보를 기반으로 JWT 토큰 생성
             UserResponseDto.TokenInfo tokenInfo = jwtTokenProvider.generateToken(authentication);
+            String userId = authentication.getName();
+            String accessToken = tokenInfo.getAccessToken();
+            String refreshToken = tokenInfo.getRefreshToken();
+
+            int tokenSave = authMapper.tokenSave(userId, accessToken, refreshToken);
 
             // 4. RefreshToken Redis 저장 (expirationTime 설정을 통해 자동 삭제 처리)
-            redisTemplate.opsForValue()
-                    .set("RT:" + authentication.getName(), tokenInfo.getRefreshToken(), tokenInfo.getRefreshTokenExpirationTime(), TimeUnit.MILLISECONDS);
+            //redisTemplate.opsForValue()
+            //       .set("RT:" + authentication.getName(), tokenInfo.getRefreshToken(), tokenInfo.getRefreshTokenExpirationTime(), TimeUnit.MILLISECONDS);
 
             return response.success(tokenInfo, "로그인에 성공했습니다.", HttpStatus.OK);
         } catch (AuthenticationException e) {
@@ -108,23 +113,32 @@ public class AuthServiceImpl implements AuthService {
 
     public ResponseEntity<?> logout(UserRequestDto.Logout logout) {
         // 1. Access Token 검증
-        if (!jwtTokenProvider.validateToken(logout.getAccessToken())) {
+        String accessToken = logout.getAccessToken().replace("\"", "");
+        String refreshToken = logout.getRefreshToken().replace("\"", "");
+
+        if (!jwtTokenProvider.validateToken(refreshToken)) {
             return response.fail("잘못된 요청입니다.", HttpStatus.BAD_REQUEST);
         }
 
         // 2. Access Token 에서 User email 을 가져옵니다.
-        Authentication authentication = jwtTokenProvider.getAuthentication(logout.getAccessToken());
+        Authentication authentication = jwtTokenProvider.getAuthentication(accessToken);
+
+        HashMap<String, Object> getTokenInfo = authMapper.getRefreshToken(authentication.getName());
+
 
         // 3. Redis 에서 해당 User email 로 저장된 Refresh Token 이 있는지 여부를 확인 후 있을 경우 삭제합니다.
-        if (redisTemplate.opsForValue().get("RT:" + authentication.getName()) != null) {
+        /*if (redisTemplate.opsForValue().get("RT:" + authentication.getName()) != null) {
             // Refresh Token 삭제
             redisTemplate.delete("RT:" + authentication.getName());
+        }*/
+        if (getTokenInfo != null) {
+            authMapper.deleteTokenInfo(authentication.getName());
         }
 
         // 4. 해당 Access Token 유효시간 가지고 와서 BlackList 로 저장하기
-        Long expiration = jwtTokenProvider.getExpiration(logout.getAccessToken());
+        /*Long expiration = jwtTokenProvider.getExpiration(logout.getAccessToken());
         redisTemplate.opsForValue()
-                .set(logout.getAccessToken(), "logout", expiration, TimeUnit.MILLISECONDS);
+                .set(logout.getAccessToken(), "logout", expiration, TimeUnit.MILLISECONDS);*/
 
         return response.success("로그아웃 되었습니다.");
     }
@@ -143,9 +157,14 @@ public class AuthServiceImpl implements AuthService {
             Authentication authentication = jwtTokenProvider.getAuthentication(accessToken);
 
             // 3. Redis 에서 User email 을 기반으로 저장된 Refresh Token 값을 가져옵니다.
-            String oldRefreshToken = (String) redisTemplate.opsForValue().get("RT:" + authentication.getName());
+            //String oldRefreshToken = (String) redisTemplate.opsForValue().get("RT:" + authentication.getName());
+
+            String userId = authentication.getName();
+            HashMap<String, Object> getRefreshToken = authMapper.getRefreshToken(userId);
+            String oldRefreshToken = (String) getRefreshToken.get("REFRESH_TOKEN");
+
             // (추가) 로그아웃되어 Redis 에 RefreshToken 이 존재하지 않는 경우 처리
-            if (ObjectUtils.isEmpty(oldRefreshToken)) {
+            if (ObjectUtils.isEmpty(getRefreshToken)) {
                 return response.fail("잘못된 요청입니다.", HttpStatus.BAD_REQUEST);
             }
             if (!oldRefreshToken.equals(refreshToken)) {
@@ -155,8 +174,10 @@ public class AuthServiceImpl implements AuthService {
             // 4. 새로운 토큰 생성
             UserResponseDto.TokenInfo tokenInfo = jwtTokenProvider.generateToken(authentication);
 
+            int updateRefreshToken = authMapper.updateRefreshToken(userId, tokenInfo.getAccessToken(), tokenInfo.getRefreshToken());
+
             // 5. RefreshToken Redis 업데이트
-            redisTemplate.opsForValue().set("RT:" + authentication.getName(), tokenInfo.getRefreshToken(), tokenInfo.getRefreshTokenExpirationTime(), TimeUnit.MILLISECONDS);
+            //redisTemplate.opsForValue().set("RT:" + authentication.getName(), tokenInfo.getRefreshToken(), tokenInfo.getRefreshTokenExpirationTime(), TimeUnit.MILLISECONDS);
 
             return response.success(tokenInfo, "Token 정보가 갱신되었습니다.", HttpStatus.OK);
         } catch (Exception e) {

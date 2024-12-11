@@ -55,4 +55,6 @@ public interface SysService {
      * @exception Exception
      */
     int deleteQry(String queryId,Object searchObj) throws Exception;
+
+    List<?> selectQryList1(String queryId, Object searchObj, String dbType) throws Exception;
 }

@@ -15,4 +15,14 @@ public interface AuthMapper {
     void insert(CustomUserDetails user);
 
     HashMap<String, Object> test();
+
+    int tokenSave(String userId, String accessToken, String refreshToken);
+
+    int updateRefreshToken(String userId, String accessToken, String refreshToken);
+
+    int deleteTokenInfo(String userId);
+
+    HashMap<String, Object> getRefreshToken(String userId);
+
+    HashMap<String, Object> getAccessToken(String accessToken);
 }

@@ -41,4 +41,54 @@
 
     </select>
 
+    <insert id="tokenSave" parameterType="com.iszion.api.auth.dto.CustomUserDetails">
+        INSERT INTO XTOKENTB (
+                               USER_ID
+                             , ACCESS_TOKEN
+                             , REFRESH_TOKEN
+        ) VALUES (
+                     #{userId}
+                 , #{accessToken}
+                 , #{refreshToken}
+                 )
+
+    </insert>
+
+    <select id="getRefreshToken" resultType="java.util.HashMap">
+        /**
+        Mapper:AuthMapper.getRefreshToken
+        */
+        SELECT USER_ID
+             , REFRESH_TOKEN
+        FROM XTOKENTB
+        WHERE USER_ID = #{userId}
+
+    </select>
+
+    <select id="getAccessToken" resultType="java.util.HashMap">
+        /**
+        Mapper:AuthMapper.getAccessToken
+        */
+        SELECT REFRESH_TOKEN
+        FROM XTOKENTB
+        WHERE ACCESS_TOKEN = #{accessToken}
+
+    </select>
+
+    <update id="updateRefreshToken" parameterType="java.util.Map">
+        /**
+        Mapper:AuthMapper.updateRefreshToken
+        */
+        UPDATE XTOKENTB
+        SET ACCESS_TOKEN = #{accessToken}
+          ,   REFRESH_TOKEN = #{refreshToken}
+        WHERE USER_ID = #{userId}
+    </update>
+
+    <delete id="deleteTokenInfo" parameterType="java.util.Map">
+        DELETE FROM XTOKENTB
+        WHERE USER_ID = #{userId}
+
+    </delete>
+
 </mapper>

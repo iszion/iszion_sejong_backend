@@ -1,5 +1,6 @@
 package com.iszion.api.config.jwt;
 
+import com.iszion.api.auth.mapper.AuthMapper;
 import com.iszion.api.sys.controller.SysController;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -18,6 +19,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashMap;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -27,7 +29,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String BEARER_TYPE = "Bearer";
 
     private final JwtTokenProvider jwtTokenProvider;
-    private final RedisTemplate redisTemplate;
+    //private final RedisTemplate redisTemplate;
+
+    private final AuthMapper authMapper;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SysController.class);
 
@@ -56,14 +60,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (isNoFilterURL || StringUtils.hasText(token) && jwtTokenProvider.validateToken(token)) {
             try {
                 // (추가) Redis 에 해당 accessToken logout 여부 확인
-                String isLogout = (String) redisTemplate.opsForValue().get(token);
-                if (ObjectUtils.isEmpty(isLogout)) {
+                //String isLogout = (String) redisTemplate.opsForValue().get(token);
+                HashMap<String, Object> getToken = authMapper.getAccessToken(token);
+
+                if (getToken != null) {
                     // 토큰이 유효할 경우 토큰에서 Authentication 객체를 가지고 와서 SecurityContext 에 저장
                     Authentication authentication = jwtTokenProvider.getAuthentication(token);
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 }
             } catch (Exception e) {
-                LOGGER.info("Redis Undefined");
+                LOGGER.info("Token Access Error");
             }
         } else {
             // 유효하지 않은 토큰 처리를 여기서 수행

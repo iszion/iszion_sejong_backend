@@ -136,7 +136,7 @@ public class SysController {
             transactionManager.rollback(status);
             rtn = "3";
             if (e.getCause() instanceof SQLException sqlException) {
-                rtnMsg = "처리실패 : " +  sqlException.getMessage();  // Get the specific error message from SQLException
+                rtnMsg = "처리실패 : " + sqlException.getMessage();  // Get the specific error message from SQLException
             } else {
                 rtnMsg = "예상치 못한 오류가 발생했습니다.";
             }
@@ -869,20 +869,20 @@ public class SysController {
         return jsonDataRtn;
     }
 
-     @PostMapping("/sys1010_save_passwordReset")
+    @PostMapping("/sys1010_save_passwordReset")
     public String sys1010_save_passwordReset(HttpServletRequest request, @RequestHeader("Authorization") String token) throws Exception {
         String accessToken = token.substring(7);
         Authentication userInfo = jwtTokenProvider.getAuthentication(accessToken);
 
-         // 트랜잭션 정의
-         DefaultTransactionDefinition def = new DefaultTransactionDefinition();
-         def.setName("SomeTxName");
-         def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
-         TransactionStatus status = transactionManager.getTransaction(def);
-         // 트랜잭션 정의 끝
+        // 트랜잭션 정의
+        DefaultTransactionDefinition def = new DefaultTransactionDefinition();
+        def.setName("SomeTxName");
+        def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
+        TransactionStatus status = transactionManager.getTransaction(def);
+        // 트랜잭션 정의 끝
 
 
-         String jsonDataRtn = "";
+        String jsonDataRtn = "";
         String rtn = "0";
         String rtnMsg = "";
         List<?> divde = null;
@@ -2787,4 +2787,9 @@ public class SysController {
         return jsonDataRtn;
     }
 
+    @GetMapping("dataTest")
+    public String dataTest(HttpServletRequest request, @RequestHeader("Authorization") String token) throws Exception {
+        Object result = sysService.selectQryList1("dataTest", null, "sejong");
+        return "";
+    }
 }

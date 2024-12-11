@@ -1,5 +1,6 @@
 package com.iszion.api.config;
 
+import com.iszion.api.auth.mapper.AuthMapper;
 import com.iszion.api.config.jwt.JwtAuthenticationFilter;
 import com.iszion.api.config.jwt.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,8 @@ public class WebSecurityConfig {
     private final JwtTokenProvider jwtTokenProvider;
     private final RedisTemplate redisTemplate;
 
+    private final AuthMapper authMapper;
+
     private static final String[] AUTH_WHITELIST = {
             "/api/sys/**",
             "/api/auth/**"
@@ -42,7 +45,8 @@ public class WebSecurityConfig {
         http.formLogin((form) -> form.disable());
         http.httpBasic(AbstractHttpConfigurer::disable);
 
-        http.addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider, redisTemplate), UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider, authMapper), UsernamePasswordAuthenticationFilter.class);
+        //http.addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider, redisTemplate), UsernamePasswordAuthenticationFilter.class);
 
         // 권한 규칙 작성
         http.authorizeHttpRequests(authorize -> authorize
