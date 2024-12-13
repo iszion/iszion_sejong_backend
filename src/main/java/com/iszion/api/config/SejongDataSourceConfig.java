@@ -4,6 +4,7 @@ import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.SqlSessionFactoryBean;
 import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,13 +15,25 @@ import javax.sql.DataSource;
 @Configuration
 public class SejongDataSourceConfig {
 
+    @Value("${spring.datasource.secondary.url}")
+    private String url;
+
+    @Value("${spring.datasource.secondary.driver-class-name}")
+    private String className;
+
+    @Value("${spring.datasource.secondary.username}")
+    private String userName;
+
+    @Value("${spring.datasource.secondary.password}")
+    private String passWord;
+
     @Bean(name = "sejongDataSource")
     public DataSource sejongDataSource() {
         return DataSourceBuilder.create()
-                .url("jdbc:log4jdbc:mariadb://218.148.255.246:33062/db_sejong?allowMultiQueries=true")
-                .driverClassName("net.sf.log4jdbc.sql.jdbcapi.DriverSpy")
-                .username("iszion")
-                .password("iszion1347#*")
+                .url(url)
+                .driverClassName(className)
+                .username(userName)
+                .password(passWord)
                 .build();
     }
 

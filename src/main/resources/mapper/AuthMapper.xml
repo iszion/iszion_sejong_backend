@@ -52,6 +52,11 @@
                  , #{refreshToken}
                  )
 
+        ON DUPLICATE KEY UPDATE
+                  ACCESS_TOKEN =  #{accessToken}
+                , REFRESH_TOKEN = #{refreshToken}
+
+
     </insert>
 
     <select id="getRefreshToken" resultType="java.util.HashMap">

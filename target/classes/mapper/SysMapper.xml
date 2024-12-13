@@ -1533,6 +1533,6 @@
         </foreach>
     </update>
     <select id="dataTest" resultType="java.util.HashMap">
-        SELECT * FROM XTOKENTB
+        SELECT * FROM db_inenergy.BACCTB
     </select>
 </mapper>

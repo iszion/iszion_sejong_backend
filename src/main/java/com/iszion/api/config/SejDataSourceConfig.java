@@ -4,6 +4,7 @@ import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.SqlSessionFactoryBean;
 import org.mybatis.spring.SqlSessionTemplate;
 import org.mybatis.spring.annotation.MapperScan;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.ApplicationContext;
@@ -17,15 +18,27 @@ import javax.sql.DataSource;
 @Configuration
 public class SejDataSourceConfig {
 
+    @Value("${spring.datasource.primary.url}")
+    private String url;
+
+    @Value("${spring.datasource.primary.driver-class-name}")
+    private String className;
+
+    @Value("${spring.datasource.primary.username}")
+    private String userName;
+
+    @Value("${spring.datasource.primary.password}")
+    private String passWord;
+
     @Bean
     @Primary
     public DataSource sejDataSource() {
 
         return DataSourceBuilder.create()
-                .url("jdbc:log4jdbc:mariadb://125.250.69.237:60004/db_sej?allowMultiQueries=true")
-                .driverClassName("net.sf.log4jdbc.sql.jdbcapi.DriverSpy") // 드라이버 클래스명을 명시적으로 지정
-                .username("iszion")
-                .password("iszion1347#*")
+                .url(url)
+                .driverClassName(className) // 드라이버 클래스명을 명시적으로 지정
+                .username(userName)
+                .password(passWord)
                 .build();
     }
 

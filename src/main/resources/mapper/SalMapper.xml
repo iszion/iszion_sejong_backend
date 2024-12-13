@@ -21,8 +21,8 @@
              , ih.CUST_CD           as  custCd
              , ih.DIV_CD            as  divCd
              , cu.CUST_NM           as  custNm
-             , id.TOT_SEQ           as  totSeq
-             , id.TOT_QTY           as  totQty
+             , IFNULL(id.TOT_SEQ,0) as  totSeq
+             , IFNULL(id.TOT_QTY,0) as  totQty
              , ih.REMARKS           as  remarks
              , ih.REG_DATE          as  regDate
              , ih.REG_ID            as  regId
@@ -86,6 +86,7 @@
              , id.REG_ID            as  regId
              , id.UPDATE_DATE       as  updateDate
              , id.UPDATE_ID         as  updateId
+             , 'R'                  as  iuD
         FROM SBUYDTB as id
             -- 거래처코드
              left outer join MPRODTB as pd ON pd.PROD_CD  = id.PROD_CD
@@ -102,5 +103,137 @@
          FROM SBUYHTB
         WHERE BUY_DAY   =   #{paramBuyDay }
     </select>
+
+
+    <insert id="sal1010_insert" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            INSERT INTO SBUYHTB
+                (
+                      BUY_DAY
+                    , SEQ
+                    , CUST_CD
+                    , DIV_CD
+                    , REMARKS
+                    , REG_DATE
+                    , REG_ID
+                    , UPDATE_DATE
+                    , UPDATE_ID
+                ) VALUES (
+                      #{item.buyDay}
+                    , #{item.seq}
+                    , #{item.custCd}
+                    , #{item.divCd}
+                    , #{item.remarks}
+                    , NOW()
+                    , #{userId}
+                    , NOW()
+                    , #{userId}
+                )
+        </foreach>
+    </insert>
+
+    <update id="sal1010_update" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            UPDATE SBUYHTB
+                SET
+                      CUST_CD       =   #{item.custCd}
+                    , DIV_CD        =   #{item.divCdCd}
+                    , REMARKS       =   #{item.remarks}
+                    , UPDATE_DATE   =   NOW()
+                    , UPDATE_ID     =   #{userId}
+            WHERE BUY_DAY           =   #{item.buyDay}
+              AND SEQ               =   #{item.seq}
+        </foreach>
+    </update>
+
+    <delete id="sal1010_delete" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            DELETE FROM SBUYHTB
+             WHERE BUY_DAY           =   #{item.buyDay}
+               AND SEQ               =   #{item.seq}
+        </foreach>
+    </delete>
+
+    <delete id="sal1010_delete_prod_all" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            DELETE FROM SBUYDTB
+            WHERE BUY_DAY       =   #{item.buyDay}
+              AND SEQ           =   #{item.seq}
+        </foreach>
+    </delete>
+
+
+
+    <insert id="sal1010_insert_prod" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            INSERT INTO SBUYDTB
+                (
+                      BUY_DAY
+                    , SEQ
+                    , CNT
+                    , CUST_CD
+                    , DIV_CD
+                    , BUY_FG
+                    , PROD_CD
+                    , QTY
+                    , PRICE
+                    , AMT
+                    , BUY_YUL
+                    , REMARKS
+                    , REG_DATE
+                    , REG_ID
+                    , UPDATE_DATE
+                    , UPDATE_ID
+                ) VALUES (
+                      #{item.buyDay}
+                    , #{item.seq}
+                    , #{item.cnt}
+                    , #{item.custCd}
+                    , #{item.divCd}
+                    , #{item.buyFg}
+                    , #{item.prodCd}
+                    , #{item.qty}
+                    , #{item.price}
+                    , #{item.amt}
+                    , #{item.buyYul}
+                    , #{item.remarks}
+                    , NOW()
+                    , #{userId}
+                    , NOW()
+                    , #{userId}
+                )
+        </foreach>
+    </insert>
+
+    <update id="sal1010_update_prod" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            UPDATE SBUYDTB
+                SET
+                      CUST_CD       =   #{item.custCd}
+                    , DIV_CD        =   #{item.divCd}
+                    , BUY_FG        =   #{item.buyFg}
+                    , PROD_CD       =   #{item.prodCd}
+                    , QTY           =   #{item.qty}
+                    , PRICE         =   #{item.price}
+                    , AMT           =   #{item.amt}
+                    , BUY_YUL       =   #{item.buyYul}
+                    , REMARKS       =   #{item.remarks}
+                    , UPDATE_DATE   =   NOW()
+                    , UPDATE_ID     =   #{userId}
+            WHERE BUY_DAY           =   #{item.buyDay}
+              AND SEQ               =   #{item.seq}
+              AND CNT               =   #{item.cnt}
+        </foreach>
+    </update>
+
+    <delete id="sal1010_delete_prod" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            DELETE FROM SBUYDTB
+             WHERE BUY_DAY           =   #{item.buyDay}
+               AND SEQ               =   #{item.seq}
+               AND CNT               =   #{item.cnt}
+        </foreach>
+    </delete>
+
 
 </mapper>

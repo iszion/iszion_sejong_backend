@@ -226,25 +226,22 @@ public class SalController {
         String jsonData = reqUtil.getBody(request);
         try {
             Map<String, Object> mapDivde = jsonUtil.jsonStringToMap(jsonData);
+            System.out.println("jsonData : " + jsonData);
+            System.out.println("mapDivde : " + mapDivde);
             Map divde_N1 =  (Map) mapDivde.get("no1");
+            Map divde_N2 =  (Map) mapDivde.get("no2");
+
             if (divde_N1 != null) {
-                List<Map<String, Object>> divde_II = (List) divde_N1.get("I");
                 List divde_I = (List) divde_N1.get("I");
                 List divde_U = (List) divde_N1.get("U");
                 List divde_D = (List) divde_N1.get("D");
 
                 if (!divde_I.isEmpty()) {
-                    Map<String, Object> result = divde_II.get(0);
-                    String stdDay = result.get("stdDay").toString();
-                    String salesCd = result.get("salesCd").toString();
                     Map param = new HashMap();
                     param.put("list1", divde_I);
-                    param.put("stdDay", stdDay);
-                    param.put("salesCd", salesCd);
                     param.put("userId", userInfo.getName());
                     int rtnI = salService.insertQry("sal1010_insert", param);
                     if(rtnI > 0)  { if(rtn == "0") {rtn = "0";} else {rtn = "1"; }} else { rtn = "1"; }
-                    divde = divde_I;
                 }
 
                 if (!divde_U.isEmpty()) {
@@ -253,7 +250,6 @@ public class SalController {
                     param.put("userId", userInfo.getName());
                     int rtnU = salService.updateQry("sal1010_update", param);
                     if(rtnU > 0)  { if(rtn == "0") {rtn = "0";} else {rtn = "1"; }} else { rtn = "1"; }
-                    divde = divde_U;
                 }
 
                 if (!divde_D.isEmpty()) {
@@ -262,9 +258,42 @@ public class SalController {
                     param.put("userId", userInfo.getName());
                     int rtnD = salService.deleteQry("sal1010_delete", param);
                     if(rtnD > 0)  { if(rtn == "0") {rtn = "0";} else {rtn = "1"; }} else { rtn = "1"; }
-                    divde = divde_D;
+                        rtnD = salService.deleteQry("sal1010_delete_prod_all", param);
+                    if(rtnD >= 0)  { if(rtn == "0") {rtn = "0";} else {rtn = "1"; }} else { rtn = "1"; }
                 }
             }
+
+            if (divde_N2 != null) {
+                List divde_I = (List) divde_N2.get("I");
+                List divde_U = (List) divde_N2.get("U");
+                List divde_D = (List) divde_N2.get("D");
+
+                if (!divde_I.isEmpty()) {
+                    Map param = new HashMap();
+                    param.put("list1", divde_I);
+                    param.put("userId", userInfo.getName());
+                    int rtnI = salService.insertQry("sal1010_insert_prod", param);
+                    if(rtnI > 0)  { if(rtn == "0") {rtn = "0";} else {rtn = "1"; }} else { rtn = "1"; }
+                }
+
+                if (!divde_U.isEmpty()) {
+                    Map param = new HashMap();
+                    param.put("list1", divde_U);
+                    param.put("userId", userInfo.getName());
+                    int rtnU = salService.updateQry("sal1010_update_prod", param);
+                    if(rtnU > 0)  { if(rtn == "0") {rtn = "0";} else {rtn = "1"; }} else { rtn = "1"; }
+                }
+
+                if (!divde_D.isEmpty()) {
+                    Map param = new HashMap();
+                    param.put("list1", divde_D);
+                    param.put("userId", userInfo.getName());
+                    int rtnD = salService.deleteQry("sal1010_delete_prod", param);
+                    if(rtnD > 0)  { if(rtn == "0") {rtn = "0";} else {rtn = "1"; }} else { rtn = "1"; }
+                }
+            }
+
+
             if(rtn == "0") {
                 rtnMsg = "정상 처리되었습니다.";
                 transactionManager.commit(status);
@@ -283,7 +312,6 @@ public class SalController {
         }
         map.put("rtn", rtn);
         map.put("rtnMsg", rtnMsg);
-        map.put("data", divde);
         jsonDataRtn = jsonUtil.getToJson(map).replaceAll("null", "\"\"");
         return jsonDataRtn;
     }
