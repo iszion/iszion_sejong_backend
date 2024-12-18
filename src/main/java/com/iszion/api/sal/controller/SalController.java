@@ -75,8 +75,8 @@ public class SalController {
         }
         return jsonDataRtn;
     }
-    @PostMapping("/sal1010_list")
-    public String sal1010_list(HttpServletRequest request, @RequestHeader("Authorization") String token) throws IOException {
+    @PostMapping("/sal1010_list_search")
+    public String sal1010_list_search(HttpServletRequest request, @RequestHeader("Authorization") String token) throws IOException {
         Object result;
 
         String jsonDataRtn = "";
@@ -90,7 +90,7 @@ public class SalController {
             reqParam = jsonUtils.jsonStringToMap(jsonData);
         }
         try {
-            result = salService.selectQryList("sal1010_list", reqParam);
+            result = salService.selectQryList("sal1010_list_search", reqParam);
 
             Map<String, Object> jsonList = new HashMap<>();
             jsonList.put("data", result);
@@ -106,8 +106,8 @@ public class SalController {
         }
         return jsonDataRtn;
     }
-    @PostMapping("/sal1010_select")
-    public String sal1010_select(HttpServletRequest request, @RequestHeader("Authorization") String token) throws IOException {
+    @PostMapping("/sal1010_list_header")
+    public String sal1010_list_header(HttpServletRequest request, @RequestHeader("Authorization") String token) throws IOException {
         Object result;
 
         String jsonDataRtn = "";
@@ -121,7 +121,7 @@ public class SalController {
             reqParam = jsonUtils.jsonStringToMap(jsonData);
         }
         try {
-            result = salService.selectQryList("sal1010_select", reqParam);
+            result = salService.selectQryList("sal1010_list_header", reqParam);
 
             Map<String, Object> jsonList = new HashMap<>();
             jsonList.put("data", result);
@@ -137,8 +137,8 @@ public class SalController {
         }
         return jsonDataRtn;
     }
-    @PostMapping("/sal1010_select_list")
-    public String sal1010_select_list(HttpServletRequest request, @RequestHeader("Authorization") String token) throws IOException {
+    @PostMapping("/sal1010_select_header")
+    public String sal1010_select_header(HttpServletRequest request, @RequestHeader("Authorization") String token) throws IOException {
         Object result;
 
         String jsonDataRtn = "";
@@ -152,7 +152,38 @@ public class SalController {
             reqParam = jsonUtils.jsonStringToMap(jsonData);
         }
         try {
-            result = salService.selectQryList("sal1010_select_list", reqParam);
+            result = salService.selectQryList("sal1010_select_header", reqParam);
+
+            Map<String, Object> jsonList = new HashMap<>();
+            jsonList.put("data", result);
+
+            jsonDataRtn = jsonUtils.getToJson(jsonList);
+            jsonDataRtn = jsonDataRtn.replaceAll("null", "\"\"");
+//            LOGGER.info("-------------------" + jsonDataRtn);
+
+        } catch (Exception e) {
+            LOGGER.info("Exception : " + e.getMessage());
+            e.printStackTrace();
+
+        }
+        return jsonDataRtn;
+    }
+    @PostMapping("/sal1010_select_list_details")
+    public String sal1010_select_list_details(HttpServletRequest request, @RequestHeader("Authorization") String token) throws IOException {
+        Object result;
+
+        String jsonDataRtn = "";
+        RequestUtil requestUtil = new RequestUtil();
+        JsonUtils jsonUtils = new JsonUtils();
+
+        String jsonData = requestUtil.getBody(request);
+
+        Map<String, Object> reqParam = new HashMap<String, Object>();
+        if (!jsonData.isEmpty()) {
+            reqParam = jsonUtils.jsonStringToMap(jsonData);
+        }
+        try {
+            result = salService.selectQryList("sal1010_select_list_details", reqParam);
 
             Map<String, Object> jsonList = new HashMap<>();
             jsonList.put("data", result);
@@ -224,10 +255,11 @@ public class SalController {
         DataRequestUtil reqUtil = new DataRequestUtil();
 
         String jsonData = reqUtil.getBody(request);
+
+        String createKeyValue = "";
+
         try {
             Map<String, Object> mapDivde = jsonUtil.jsonStringToMap(jsonData);
-            System.out.println("jsonData : " + jsonData);
-            System.out.println("mapDivde : " + mapDivde);
             Map divde_N1 =  (Map) mapDivde.get("no1");
             Map divde_N2 =  (Map) mapDivde.get("no2");
 
@@ -237,10 +269,26 @@ public class SalController {
                 List divde_D = (List) divde_N1.get("D");
 
                 if (!divde_I.isEmpty()) {
-                    Map param = new HashMap();
+
+                    List<Map<String, Object>> divde_II = (List<Map<String, Object>>) divde_N1.get("I");
+                    String stdDay = (String) divde_II.get(0).get("buyDay");
+
+                    Map<String, Object> param = new HashMap<>();
+                    param.put("stdDay", stdDay);
                     param.put("list1", divde_I);
                     param.put("userId", userInfo.getName());
-                    int rtnI = salService.insertQry("sal1010_insert", param);
+                    int rtnI = salService.insertQry("sal1010_insert_header", param);
+
+                    createKeyValue = (String) param.get("seq"); // insert에서 생성된 키값 불러오기
+                    // 아이템 자료에 불러온 키값 적용 업데이트
+                    List<Map<String, Object>> divde_N2_I = (List<Map<String, Object>>) divde_N2.get("I");
+                    if (divde_N2_I != null) {
+                        for (Map<String, Object> item : divde_N2_I) {
+                            item.put("seq", createKeyValue); // seq 값을 업데이트
+                        }
+                        divde_N2.put("I", divde_N2_I);   // 업데이트된 "I" 데이터를 다시 divde_N2에 반영
+                    }
+
                     if(rtnI > 0)  { if(rtn == "0") {rtn = "0";} else {rtn = "1"; }} else { rtn = "1"; }
                 }
 
@@ -248,7 +296,7 @@ public class SalController {
                     Map param = new HashMap();
                     param.put("list1", divde_U);
                     param.put("userId", userInfo.getName());
-                    int rtnU = salService.updateQry("sal1010_update", param);
+                    int rtnU = salService.updateQry("sal1010_update_header", param);
                     if(rtnU > 0)  { if(rtn == "0") {rtn = "0";} else {rtn = "1"; }} else { rtn = "1"; }
                 }
 
@@ -256,9 +304,9 @@ public class SalController {
                     Map param = new HashMap();
                     param.put("list1", divde_D);
                     param.put("userId", userInfo.getName());
-                    int rtnD = salService.deleteQry("sal1010_delete", param);
+                    int rtnD = salService.deleteQry("sal1010_delete_header", param);
                     if(rtnD > 0)  { if(rtn == "0") {rtn = "0";} else {rtn = "1"; }} else { rtn = "1"; }
-                        rtnD = salService.deleteQry("sal1010_delete_prod_all", param);
+                        rtnD = salService.deleteQry("sal1010_delete_details_all", param);
                     if(rtnD >= 0)  { if(rtn == "0") {rtn = "0";} else {rtn = "1"; }} else { rtn = "1"; }
                 }
             }
@@ -272,7 +320,7 @@ public class SalController {
                     Map param = new HashMap();
                     param.put("list1", divde_I);
                     param.put("userId", userInfo.getName());
-                    int rtnI = salService.insertQry("sal1010_insert_prod", param);
+                    int rtnI = salService.insertQry("sal1010_insert_details", param);
                     if(rtnI > 0)  { if(rtn == "0") {rtn = "0";} else {rtn = "1"; }} else { rtn = "1"; }
                 }
 
@@ -280,7 +328,7 @@ public class SalController {
                     Map param = new HashMap();
                     param.put("list1", divde_U);
                     param.put("userId", userInfo.getName());
-                    int rtnU = salService.updateQry("sal1010_update_prod", param);
+                    int rtnU = salService.updateQry("sal1010_update_details", param);
                     if(rtnU > 0)  { if(rtn == "0") {rtn = "0";} else {rtn = "1"; }} else { rtn = "1"; }
                 }
 
@@ -288,7 +336,7 @@ public class SalController {
                     Map param = new HashMap();
                     param.put("list1", divde_D);
                     param.put("userId", userInfo.getName());
-                    int rtnD = salService.deleteQry("sal1010_delete_prod", param);
+                    int rtnD = salService.deleteQry("sal1010_delete_details", param);
                     if(rtnD > 0)  { if(rtn == "0") {rtn = "0";} else {rtn = "1"; }} else { rtn = "1"; }
                 }
             }
@@ -316,4 +364,39 @@ public class SalController {
         return jsonDataRtn;
     }
 
+
+    /* *******************************************************************************
+     ** 매입전표현황
+     ** ******************************************************************************* */
+    @PostMapping("/sal1020_list")
+    public String sal1020_list(HttpServletRequest request, @RequestHeader("Authorization") String token) throws IOException {
+        Object result;
+
+        String jsonDataRtn = "";
+        RequestUtil requestUtil = new RequestUtil();
+        JsonUtils jsonUtils = new JsonUtils();
+
+        String jsonData = requestUtil.getBody(request);
+
+        Map<String, Object> reqParam = new HashMap<String, Object>();
+        if (!jsonData.isEmpty()) {
+            reqParam = jsonUtils.jsonStringToMap(jsonData);
+        }
+        try {
+            result = salService.selectQryList("sal1020_list", reqParam);
+
+            Map<String, Object> jsonList = new HashMap<>();
+            jsonList.put("data", result);
+
+            jsonDataRtn = jsonUtils.getToJson(jsonList);
+            jsonDataRtn = jsonDataRtn.replaceAll("null", "\"\"");
+//            LOGGER.info("-------------------" + jsonDataRtn);
+
+        } catch (Exception e) {
+            LOGGER.info("Exception : " + e.getMessage());
+            e.printStackTrace();
+
+        }
+        return jsonDataRtn;
+    }
 }
