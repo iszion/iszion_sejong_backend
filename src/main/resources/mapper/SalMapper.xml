@@ -31,10 +31,10 @@
         FROM SBUYHTB as ih
              -- 입고 아이템 체크
              left outer join (
-                                SELECT SEQ, COUNT(*) as TOT_SEQ, SUM(QTY) as TOT_QTY
-                                    FROM SBUYDTB where BUY_DAY   = #{paramBuyDay }
-                                    GROUP BY SEQ
-                            ) id ON id.SEQ = ih.SEQ
+                                SELECT BUY_DAY, SEQ, COUNT(*) as TOT_SEQ, SUM(QTY) as TOT_QTY
+                                    FROM SBUYDTB where LEFT(BUY_DAY,6)   = #{paramYyMm }
+                                    GROUP BY BUY_DAY, SEQ
+                            ) id ON id.BUY_DAY = ih.BUY_DAY AND id.SEQ = ih.SEQ
 
             -- 거래처코드
              left outer join MCUSTTB as cu ON cu.CUST_CD  = ih.CUST_CD
@@ -278,7 +278,7 @@
         </foreach>
     </delete>
 
-
+    <!-- ###  매입전표현황    ################################ -->
     <select id="sal1020_list" resultType="java.util.HashMap">
         SELECT
                ROWNUM()             as  rowNum
@@ -320,5 +320,310 @@
         WITH ROLLUP
 
     </select>
+
+
+    <!-- ###  매출전표 관리    ################################ -->
+    <select id="sal2010_list_event" resultType="java.util.HashMap">
+        SELECT
+            h.DEAL_DAY               as  eventDay
+        FROM SDEALHTB h
+        WHERE 1=1
+          AND SUBSTRING(h.DEAL_DAY, 1, 4) =  #{paramYear}
+          AND SUBSTRING(h.DEAL_DAY, 5, 2) = #{paramMonth}
+        GROUP BY h.DEAL_DAY
+
+    </select>
+
+    <select id="sal2010_list_search" resultType="java.util.HashMap">
+        SELECT
+                  h.DEAL_DAY        as  dealDay
+                , h.SEQ             as  seq
+                , h.DIV_CD          as  divCd
+                , h.CUST_CD         as  custCd
+                , c.CUST_NM         as  custNm
+                , h.CUSTS_CD        as  custsCd
+                , h.CUST_SEQ        as  custSeq
+                , d.SUM_CNT		    as 	sumCnt
+                , d.SUM_QTY  		as 	sumQty
+                , d.SUM_AMT   		as	sumAmt
+                , d.RECEIPT_YN      as  receiptYn
+                , h.REMARKS         as  remarks
+                , h.REG_DATE        as  regDate
+                , h.REG_ID          as  regId
+                , h.UPDATE_DATE     as  updateDate
+                , h.UPDATE_ID       as  updateId
+        FROM SDEALHTB as h
+
+            -- 출고자료 체크
+            left outer join (
+                                SELECT DEAL_DAY, SEQ, COUNT(*) AS SUM_CNT, SUM(QTY)as SUM_QTY, SUM(AMT) as SUM_AMT, RECEIPT_YN
+                                  FROM SDEALTB
+                                  WHERE LEFT(DEAL_DAY,6)   = #{paramYyMm }
+                                  GROUP BY DEAL_DAY, SEQ
+                            ) d ON d.DEAL_DAY = h.DEAL_DAY AND d.SEQ = h.SEQ
+            -- 거래처코드
+            left outer join MCUSTTB as c  ON c.CUST_CD  = h.CUST_CD
+
+        WHERE 1=1
+                AND LEFT(h.DEAL_DAY,6)     =   #{paramYyMm }
+            <if test='paramValueNm != null and paramValueNm != ""'>
+                AND (   h.CUST_CD LIKE CONCAT( '%', #{paramValueNm }, '%' )
+                    OR  h.REMARKS LIKE CONCAT( '%', #{paramValueNm }, '%')
+                    OR  c.CUST_NM LIKE CONCAT( '%', #{paramValueNm }, '%')
+                    )
+            </if>
+        order by h.DEAL_DAY desc, h.SEQ desc
+
+    </select>
+
+    <select id="sal2010_list_header" resultType="java.util.HashMap">
+        SELECT
+               h.DEAL_DAY       as  dealDay
+             , h.SEQ            as  seq
+             , h.DIV_CD         as  divCd
+             , h.CUST_CD        as  custCd
+             , c.CUST_NM        as  custNm
+             , h.CUSTS_CD       as  custsCd
+             , h.CUST_SEQ       as  custSeq
+             , d.SUM_CNT		as 	sumCnt
+             , d.SUM_QTY  		as 	sumQty
+             , d.SUM_AMT   		as	sumAmt
+             , d.RECEIPT_YN     as  receiptYn
+             , h.REMARKS        as  remarks
+             , h.REG_DATE       as  regDate
+             , h.REG_ID         as  regId
+             , h.UPDATE_DATE    as  updateDate
+             , h.UPDATE_ID      as  updateId
+        FROM SDEALHTB as h
+             -- 출고자료 체크
+             left outer join (
+                                SELECT DEAL_DAY, SEQ, COUNT(*) AS SUM_CNT, SUM(QTY)as SUM_QTY, SUM(AMT) as SUM_AMT, RECEIPT_YN
+                                FROM SDEALDTB
+                                WHERE DEAL_DAY   = #{paramDealDay }
+                                GROUP BY DEAL_DAY, SEQ
+                            ) d ON d.DEAL_DAY = h.DEAL_DAY AND d.SEQ = h.SEQ
+            -- 거래처코드
+                 left outer join MCUSTTB as c  ON c.CUST_CD  = h.CUST_CD
+
+        WHERE 1=1
+          AND h.DEAL_DAY     =   #{paramDealDay }
+          AND h.DIV_CD       =   #{paramDivCd }
+        ORDER BY h.DEAL_DAY desc, h.SEQ desc
+
+    </select>
+
+    <select id="sal2010_select_header" resultType="java.util.HashMap">
+        SELECT
+               h.DEAL_DAY           as  dealDay
+             , h.SEQ                as  seq
+             , h.DIV_CD             as  divCd
+             , h.CUST_CD            as  custCd
+             , c.CUST_NM            as  custNm
+             , h.CUSTS_CD           as  custsCd
+             , h.CUST_SEQ           as  custSeq
+             , h.REMARKS            as  remarks
+             , h.KOUP_RETURN_DAY    as  koupReturnDay
+             , h.REG_DATE           as  regDate
+             , h.REG_ID             as  regId
+             , h.UPDATE_DATE        as  updateDate
+             , h.UPDATE_ID          as  updateId
+
+             , c.YUL_WT             as  yulWt
+             , c.YUL_MJ             as  yulMj
+             , c.YUL_HM             as  yulHm
+             , c.YUL_NP             as  yulNp
+             , c.YUL_TB             as  yulTb
+             , c.YUL_HD             as  yulHd
+             , c.YUL_HS             as  yulHs
+             , c.YUL_SG             as  yulSg
+             , c.YUL_GT             as  yulGt
+        FROM SDEALHTB as h
+                 -- 거래처코드
+                 left outer join MCUSTTB as c ON c.CUST_CD  = h.CUST_CD
+
+        where 1=1
+          AND h.DEAL_DAY   =   #{paramDealDay }
+          AND h.SEQ        =   #{paramSeq }
+
+    </select>
+
+    <select id="sal2010_select_list_details" resultType="java.util.HashMap">
+        SELECT
+               d.DEAL_DAY           as  dealDay
+             , d.SEQ                as  seq
+             , d.CNT                as  cnt
+             , d.CUST_CD            as  custCd
+             , d.CUSTS_CD           as  custsCd
+             , d.DIV_CD             as  divCd
+             , d.CUST_SEQ           as  custSeq
+             , d.DEAL_FG            as  dealFg
+             , c1.COMM_NM           as  buyFgNm
+             , d.PROD_CD            as  prodCd
+             , p.PROD_NM            as  prodNm
+             , d.QTY                as  qty
+             , d.PRICE              as  price
+             , d.AMT                as  amt
+             , d.YUL                as  yul
+             , d.RETURN_DAY         as  returnDay
+             , d.RECEIPT_YN         as  receiptYn
+             , d.RECEIPT_DATE       as  receiptDate
+             , d.REMARKS            as  remarks
+             , d.REG_DATE           as  regDate
+             , d.REG_ID             as  regId
+             , d.UPDATE_DATE        as  updateDate
+             , d.UPDATE_ID          as  updateId
+             , 'R'                  as  iuD
+        FROM SDEALDTB as d
+                 -- 도서코드
+                 left outer join MPRODTB as p  ON p.PROD_CD  = d.PROD_CD
+                 left outer join MCOMMTB as c1 ON c1.COMM_CD  = d.DEAL_FG
+
+        where 1=1
+          AND d.DEAL_DAY   =   #{paramDealDay }
+          AND d.SEQ        =   #{paramSeq }
+
+    </select>
+
+    <select id="sal2010_maxSeqCheck" resultType="java.util.HashMap">
+        SELECT IFNULL( LPAD(CAST(MAX(SEQ) AS UNSIGNED) + 1, 4, '0'), '0001') as maxSeq
+        FROM SDEALHTB
+        WHERE DEAL_DAY   =   #{paramDealDay }
+    </select>
+
+
+    <insert id="sal2010_insert_header" parameterType="java.util.Map" useGeneratedKeys="true" keyProperty="seq">
+        <selectKey keyProperty="seq" resultType="String" order="BEFORE">
+            SELECT IFNULL( LPAD(CAST(MAX(SEQ) AS UNSIGNED) + 1, 4, '0'), '0001') as seq
+            FROM SBUYHTB
+            WHERE BUY_DAY   =   #{stdDay}
+        </selectKey>
+        <foreach collection="list1" item="item" separator=";">
+            INSERT INTO SBUYHTB
+            (
+            BUY_DAY
+            , SEQ
+            , CUST_CD
+            , DIV_CD
+            , REMARKS
+            , REG_DATE
+            , REG_ID
+            , UPDATE_DATE
+            , UPDATE_ID
+            ) VALUES (
+            #{item.buyDay}
+            , #{seq}
+            , #{item.custCd}
+            , #{item.divCd}
+            , #{item.remarks}
+            , NOW()
+            , #{userId}
+            , NOW()
+            , #{userId}
+            )
+        </foreach>
+    </insert>
+
+    <update id="sal2010_update_header" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            UPDATE SBUYHTB
+            SET
+            CUST_CD       =   #{item.custCd}
+            , DIV_CD        =   #{item.divCdCd}
+            , REMARKS       =   #{item.remarks}
+            , UPDATE_DATE   =   NOW()
+            , UPDATE_ID     =   #{userId}
+            WHERE BUY_DAY           =   #{item.buyDay}
+            AND SEQ               =   #{item.seq}
+        </foreach>
+    </update>
+
+    <delete id="sal2010_delete_header" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            DELETE FROM SBUYHTB
+            WHERE BUY_DAY           =   #{item.buyDay}
+            AND SEQ               =   #{item.seq}
+        </foreach>
+    </delete>
+
+    <delete id="sal2010_delete_details_all" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            DELETE FROM SBUYDTB
+            WHERE BUY_DAY       =   #{item.buyDay}
+            AND SEQ           =   #{item.seq}
+        </foreach>
+    </delete>
+
+
+
+    <insert id="sal2010_insert_details" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            INSERT INTO SBUYDTB
+            (
+            BUY_DAY
+            , SEQ
+            , CNT
+            , CUST_CD
+            , DIV_CD
+            , BUY_FG
+            , PROD_CD
+            , QTY
+            , PRICE
+            , AMT
+            , BUY_YUL
+            , REMARKS
+            , REG_DATE
+            , REG_ID
+            , UPDATE_DATE
+            , UPDATE_ID
+            ) VALUES (
+            #{item.buyDay}
+            , #{item.seq}
+            , (SELECT IFNULL(max(a.CNT),0) + 1 as cnt from SBUYDTB a where a.BUY_DAY = #{item.buyDay} AND a.SEQ = #{item.seq} )
+            , #{item.custCd}
+            , #{item.divCd}
+            , #{item.buyFg}
+            , #{item.prodCd}
+            , #{item.qty}
+            , #{item.price}
+            , #{item.amt}
+            , #{item.buyYul}
+            , #{item.remarks}
+            , NOW()
+            , #{userId}
+            , NOW()
+            , #{userId}
+            )
+        </foreach>
+    </insert>
+
+    <update id="sal2010_update_details" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            UPDATE SBUYDTB
+            SET
+            CUST_CD       =   #{item.custCd}
+            , DIV_CD        =   #{item.divCd}
+            , BUY_FG        =   #{item.buyFg}
+            , PROD_CD       =   #{item.prodCd}
+            , QTY           =   #{item.qty}
+            , PRICE         =   #{item.price}
+            , AMT           =   #{item.amt}
+            , BUY_YUL       =   #{item.buyYul}
+            , REMARKS       =   #{item.remarks}
+            , UPDATE_DATE   =   NOW()
+            , UPDATE_ID     =   #{userId}
+            WHERE BUY_DAY           =   #{item.buyDay}
+            AND SEQ               =   #{item.seq}
+            AND CNT               =   #{item.cnt}
+        </foreach>
+    </update>
+
+    <delete id="sal2010_delete_details" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            DELETE FROM SBUYDTB
+            WHERE BUY_DAY           =   #{item.buyDay}
+            AND SEQ               =   #{item.seq}
+            AND CNT               =   #{item.cnt}
+        </foreach>
+    </delete>
 
 </mapper>

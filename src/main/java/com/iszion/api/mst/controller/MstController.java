@@ -147,7 +147,6 @@ public class MstController {
      ** ******************************************************************************* */
     @PostMapping("/comm_option_list")
     public String comm_option_list(HttpServletRequest request, @RequestHeader("Authorization") String token) throws IOException {
-        System.out.println("comm_option_list.........");
         Object result;
 
         String jsonDataRtn = "";
@@ -162,6 +161,40 @@ public class MstController {
         }
         try {
             result = mstService.selectQryList("comm_option_list", reqParam);
+
+            Map<String, Object> jsonList = new HashMap<>();
+            jsonList.put("data", result);
+
+            jsonDataRtn = jsonUtils.getToJson(jsonList);
+            jsonDataRtn = jsonDataRtn.replaceAll("null", "\"\"");
+
+        } catch (Exception e) {
+            LOGGER.info("Exception : " + e.getMessage());
+            e.printStackTrace();
+
+        }
+        return jsonDataRtn;
+    }
+
+    /* *******************************************************************************
+     ** 지점코드 옵션 처리부분 부분
+     ** ******************************************************************************* */
+    @PostMapping("/custs_option_list")
+    public String custs_option_list(HttpServletRequest request, @RequestHeader("Authorization") String token) throws IOException {
+        Object result;
+
+        String jsonDataRtn = "";
+        RequestUtil requestUtil = new RequestUtil();
+        JsonUtils jsonUtils = new JsonUtils();
+
+        String jsonData = requestUtil.getBody(request);
+
+        Map<String, Object> reqParam = new HashMap<String, Object>();
+        if (!jsonData.isEmpty()) {
+            reqParam = jsonUtils.jsonStringToMap(jsonData);
+        }
+        try {
+            result = mstService.selectQryList("custs_option_list", reqParam);
 
             Map<String, Object> jsonList = new HashMap<>();
             jsonList.put("data", result);
