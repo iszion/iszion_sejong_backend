@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import net.coobird.thumbnailator.Thumbnails;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
@@ -42,7 +43,10 @@ public class MstController {
     private static final Logger LOGGER = LoggerFactory.getLogger(MstController.class);
     private final MstService mstService;
     private final JwtTokenProvider jwtTokenProvider;
-    private final PlatformTransactionManager transactionManager;  // 트랜잭션 매니저
+//    private final PlatformTransactionManager transactionManager;  // 트랜잭션 매니저
+
+    @Qualifier("db1TransactionManager")  // Use @Qualifier to inject the specific transaction manager for db1
+    private final PlatformTransactionManager db1TransactionManager;
 
     @Value("${file.upload.folder}")
     private String UPLOAD_DIR;
@@ -357,7 +361,7 @@ public class MstController {
         DefaultTransactionDefinition def = new DefaultTransactionDefinition();
         def.setName("SomeTxName");
         def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
-        TransactionStatus status = transactionManager.getTransaction(def);
+        TransactionStatus status = db1TransactionManager.getTransaction(def);
         // 트랜잭션 정의 끝
 
 
@@ -387,8 +391,8 @@ public class MstController {
                     Map<String, Object> result = divde_I.get(0);
                     String passwd = passwordEncoder.encode(result.get("empCd").toString());
                     result.put("passwd", passwd);
-                    System.identityHashCode(divde_I);
-                    System.identityHashCode(result);
+//                    System.identityHashCode(divde_I);
+//                    System.identityHashCode(result);
                 }
                 if (!divde_I.isEmpty()) {
                     Map<String, Object> result = divde_I.get(0);
@@ -405,8 +409,8 @@ public class MstController {
                     Map<String, Object> result = divde_U.get(0);
                     String passwd = passwordEncoder.encode(result.get("empCd").toString());
                     result.put("passwd", passwd);
-                    System.identityHashCode(divde_U);
-                    System.identityHashCode(result);
+//                    System.identityHashCode(divde_U);
+//                    System.identityHashCode(result);
                 }
                 if (!divde_U.isEmpty()) {
                     Map<String, Object> result = divde_U.get(0);
@@ -431,17 +435,17 @@ public class MstController {
             }
             if(rtn == "0") {
                 rtnMsg = "정상 처리되었습니다.";
-                transactionManager.commit(status);
+                db1TransactionManager.commit(status);
 
             } else {
                 rtnMsg = "비정상 처리되었습니다.";
-                transactionManager.rollback(status);
+                db1TransactionManager.rollback(status);
             }
         } catch (Exception e) {
-            transactionManager.rollback(status);
+            db1TransactionManager.rollback(status);
             rtn = "3";
             if (e.getCause() instanceof SQLException sqlException) {
-                rtnMsg = "처리실패 : " + sqlException.getMessage();  // Get the specific error message from SQLException
+                rtnMsg = "처리실패 : " + sqlException.getMessage();
             } else {
                 rtnMsg = "예상치 못한 오류가 발생했습니다.";
             }
@@ -502,7 +506,7 @@ public class MstController {
         DefaultTransactionDefinition def = new DefaultTransactionDefinition();
         def.setName("SomeTxName");
         def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
-        TransactionStatus status = transactionManager.getTransaction(def);
+        TransactionStatus status = db1TransactionManager.getTransaction(def);
         // 트랜잭션 정의 끝
 
         File file = new File(UPLOAD_DIR + "/images/" + filename);
@@ -515,13 +519,13 @@ public class MstController {
             int result = mstService.deleteQry("mst1010_fileDelete", param);
 
             if (file.exists() && file.delete() && fileThumb.exists() && fileThumb.delete() && result > 0) {
-                transactionManager.commit(status);
+                db1TransactionManager.commit(status);
                 return ResponseEntity.ok("SUCCESS");
             }
-            transactionManager.rollback(status);
+            db1TransactionManager.rollback(status);
             return ResponseEntity.ok("ERROR");
         } catch (Exception e) {
-            transactionManager.rollback(status);
+            db1TransactionManager.rollback(status);
             return ResponseEntity.ok("ERROR : " + e.getMessage());
         }
     }
@@ -533,7 +537,7 @@ public class MstController {
         DefaultTransactionDefinition def = new DefaultTransactionDefinition();
         def.setName("SomeTxName");
         def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
-        TransactionStatus status = transactionManager.getTransaction(def);
+        TransactionStatus status = db1TransactionManager.getTransaction(def);
         // 트랜잭션 정의 끝
 
 
@@ -567,10 +571,10 @@ public class MstController {
 
             // 데이터베이스 업데이트 (썸네일 경로 포함)
             int result = mstService.updateQry("mst1010_fileSave_sign", param);
-            transactionManager.commit(status);
+            db1TransactionManager.commit(status);
             return ResponseEntity.ok("SUCCESS");
         } catch (Exception e) {
-            transactionManager.rollback(status);
+            db1TransactionManager.rollback(status);
             return ResponseEntity.ok("ERROR : " + e.getMessage());
         }
     }
@@ -582,7 +586,7 @@ public class MstController {
         DefaultTransactionDefinition def = new DefaultTransactionDefinition();
         def.setName("SomeTxName");
         def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
-        TransactionStatus status = transactionManager.getTransaction(def);
+        TransactionStatus status = db1TransactionManager.getTransaction(def);
         // 트랜잭션 정의 끝
 
         File file = new File(UPLOAD_DIR + "/images/sign/" + filename);
@@ -594,13 +598,13 @@ public class MstController {
             int result = mstService.deleteQry("mst1010_fileDelete_sign", param);
 
             if (file.exists() && file.delete() && result > 0) {
-                transactionManager.commit(status);
+                db1TransactionManager.commit(status);
                 return ResponseEntity.ok("SUCCESS");
             }
-            transactionManager.commit(status);
+            db1TransactionManager.commit(status);
             return ResponseEntity.ok("ERROR");
         } catch (Exception e) {
-            transactionManager.rollback(status);
+            db1TransactionManager.rollback(status);
             return ResponseEntity.ok("ERROR : " + e.getMessage());
         }
     }
@@ -746,7 +750,7 @@ public class MstController {
         DefaultTransactionDefinition def = new DefaultTransactionDefinition();
         def.setName("SomeTxName");
         def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
-        TransactionStatus status = transactionManager.getTransaction(def);
+        TransactionStatus status = db1TransactionManager.getTransaction(def);
         // 트랜잭션 정의 끝
 
 
@@ -796,13 +800,13 @@ public class MstController {
             }
             if(rtn == "0") {
                 rtnMsg = "정상 처리되었습니다.";
-                transactionManager.commit(status);
+                db1TransactionManager.commit(status);
             } else {
                 rtnMsg = "비정상 처리되었습니다.";
-                transactionManager.rollback(status);
+                db1TransactionManager.rollback(status);
             }
         } catch (Exception e) {
-            transactionManager.rollback(status);
+            db1TransactionManager.rollback(status);
             rtn = "3";
             if (e.getCause() instanceof SQLException sqlException) {
                 rtnMsg = "처리실패 : " + sqlException.getMessage();  // Get the specific error message from SQLException
@@ -958,7 +962,7 @@ public class MstController {
         DefaultTransactionDefinition def = new DefaultTransactionDefinition();
         def.setName("SomeTxName");
         def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
-        TransactionStatus status = transactionManager.getTransaction(def);
+        TransactionStatus status = db1TransactionManager.getTransaction(def);
         // 트랜잭션 정의 끝
 
 
@@ -1008,13 +1012,13 @@ public class MstController {
             }
             if(rtn == "0") {
                 rtnMsg = "정상 처리되었습니다.";
-                transactionManager.commit(status);
+                db1TransactionManager.commit(status);
             } else {
                 rtnMsg = "비정상 처리되었습니다.";
-                transactionManager.rollback(status);
+                db1TransactionManager.rollback(status);
             }
         } catch (Exception e) {
-            transactionManager.rollback(status);
+            db1TransactionManager.rollback(status);
             rtn = "3";
             if (e.getCause() instanceof SQLException sqlException) {
                 rtnMsg = "처리실패 : " + sqlException.getMessage();  // Get the specific error message from SQLException
@@ -1106,7 +1110,7 @@ public class MstController {
         DefaultTransactionDefinition def = new DefaultTransactionDefinition();
         def.setName("SomeTxName");
         def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
-        TransactionStatus status = transactionManager.getTransaction(def);
+        TransactionStatus status = db1TransactionManager.getTransaction(def);
         // 트랜잭션 정의 끝
 
 
@@ -1157,13 +1161,13 @@ public class MstController {
             }
             if(rtn == "0") {
                 rtnMsg = "정상 처리되었습니다.";
-                transactionManager.commit(status);
+                db1TransactionManager.commit(status);
             } else {
                 rtnMsg = "비정상 처리되었습니다.";
-                transactionManager.rollback(status);
+                db1TransactionManager.rollback(status);
             }
         } catch (Exception e) {
-            transactionManager.rollback(status);
+            db1TransactionManager.rollback(status);
             rtn = "3";
             if (e.getCause() instanceof SQLException sqlException) {
                 rtnMsg = "처리실패 : " + sqlException.getMessage();  // Get the specific error message from SQLException
@@ -1188,7 +1192,7 @@ public class MstController {
         DefaultTransactionDefinition def = new DefaultTransactionDefinition();
         def.setName("SomeTxName");
         def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
-        TransactionStatus status = transactionManager.getTransaction(def);
+        TransactionStatus status = db1TransactionManager.getTransaction(def);
         // 트랜잭션 정의 끝
 
 
@@ -1238,13 +1242,13 @@ public class MstController {
             }
             if(rtn == "0") {
                 rtnMsg = "정상 처리되었습니다.";
-                transactionManager.commit(status);
+                db1TransactionManager.commit(status);
             } else {
                 rtnMsg = "비정상 처리되었습니다.";
-                transactionManager.rollback(status);
+                db1TransactionManager.rollback(status);
             }
         } catch (Exception e) {
-            transactionManager.rollback(status);
+            db1TransactionManager.rollback(status);
             rtn = "3";
             if (e.getCause() instanceof SQLException sqlException) {
                 rtnMsg = "처리실패 : " + sqlException.getMessage();  // Get the specific error message from SQLException
@@ -1342,7 +1346,7 @@ public class MstController {
         DefaultTransactionDefinition def = new DefaultTransactionDefinition();
         def.setName("SomeTxName");
         def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
-        TransactionStatus status = transactionManager.getTransaction(def);
+        TransactionStatus status = db1TransactionManager.getTransaction(def);
         // 트랜잭션 정의 끝
 
 
@@ -1396,13 +1400,13 @@ public class MstController {
             }
             if(rtn == "0") {
                 rtnMsg = "정상 처리되었습니다.";
-                transactionManager.commit(status);
+                db1TransactionManager.commit(status);
             } else {
                 rtnMsg = "비정상 처리되었습니다.";
-                transactionManager.rollback(status);
+                db1TransactionManager.rollback(status);
             }
         } catch (Exception e) {
-            transactionManager.rollback(status);
+            db1TransactionManager.rollback(status);
             rtn = "3";
             if (e.getCause() instanceof SQLException sqlException) {
                 rtnMsg = "처리실패 : " +  sqlException.getMessage();  // Get the specific error message from SQLException
@@ -1427,7 +1431,7 @@ public class MstController {
         DefaultTransactionDefinition def = new DefaultTransactionDefinition();
         def.setName("SomeTxName");
         def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
-        TransactionStatus status = transactionManager.getTransaction(def);
+        TransactionStatus status = db1TransactionManager.getTransaction(def);
         // 트랜잭션 정의 끝
 
 
@@ -1480,13 +1484,13 @@ public class MstController {
             }
             if(rtn == "0") {
                 rtnMsg = "정상 처리되었습니다.";
-                transactionManager.commit(status);
+                db1TransactionManager.commit(status);
             } else {
                 rtnMsg = "비정상 처리되었습니다.";
-                transactionManager.rollback(status);
+                db1TransactionManager.rollback(status);
             }
         } catch (Exception e) {
-            transactionManager.rollback(status);
+            db1TransactionManager.rollback(status);
             rtn = "3";
             if (e.getCause() instanceof SQLException sqlException) {
                 rtnMsg = "처리실패 : " + sqlException.getMessage();  // Get the specific error message from SQLException

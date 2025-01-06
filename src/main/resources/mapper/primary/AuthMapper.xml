@@ -23,7 +23,7 @@
 
     <insert id="insert" parameterType="com.iszion.api.auth.dto.CustomUserDetails">
         INSERT INTO XUSERTB (
-                             USER_ID
+                               USER_ID
                              , PASSWD
                              , USER_NM
                              , ROLE

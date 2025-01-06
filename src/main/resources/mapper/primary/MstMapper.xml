@@ -2,7 +2,6 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.iszion.api.mst.dao.MstDAO">
 
-
     <!--    공통코드 list -->
     <select id="comm_option_list" resultType="java.util.HashMap">
         SELECT
@@ -12,6 +11,18 @@
         WHERE LEFT(a.COMM_CD,3) =   #{paramCommCd1}
           AND SUBSTRING(a.COMM_CD, 4,4) != '0000'
 
+    </select>
+
+    <!--    지점코드 list -->
+    <select id="custs_option_list" resultType="java.util.HashMap">
+        SELECT
+               a.CUSTS_CD            as  custsCd
+             , a.CUSTS_NM            as  custsNm
+        FROM MCUSTSTB a
+        WHERE CUST_CD   =   #{paramCustCd }
+          AND CUSTS_CD  != '00000000'
+          AND USE_YN    =   'Y'
+        ORDER BY CUSTS_NM   ASC
     </select>
 
     <!--    Help코드 list -->
@@ -32,12 +43,21 @@
 
     <select id="helpCust_list" resultType="java.util.HashMap">
         SELECT
-               a.CUST_CD           as  custCd
-             , a.CUST_NM           as  custNm
-             , a.CUST_BUSIN_NM     as  custBusinNm
-             , a.CUST_BUSIN_NO     as  custBusinNo
-             , a.CUST_OWNER        as  custOwner
-             , a.USE_YN            as  useYn
+               a.CUST_CD            as  custCd
+             , a.CUST_NM            as  custNm
+             , a.CUST_BUSIN_NM      as  custBusinNm
+             , a.CUST_BUSIN_NO      as  custBusinNo
+             , a.CUST_OWNER         as  custOwner
+             , a.YUL_WT             as  yulWt
+             , a.YUL_MJ             as  yulMj
+             , a.YUL_HM             as  yulHm
+             , a.YUL_NP             as  yulNp
+             , a.YUL_TB             as  yulTb
+             , a.YUL_HD             as  yulHd
+             , a.YUL_HS             as  yulHs
+             , a.YUL_SG             as  yulSg
+             , a.YUL_GT             as  yulGt
+             , a.USE_YN             as  useYn
         FROM MCUSTTB a
         WHERE 1=1
             <if test='paramAll == "N"'>

@@ -10,7 +10,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.util.ObjectUtils;
@@ -29,7 +28,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String BEARER_TYPE = "Bearer";
 
     private final JwtTokenProvider jwtTokenProvider;
-    //private final RedisTemplate redisTemplate;
 
     private final AuthMapper authMapper;
 
@@ -59,8 +57,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         // 2. validateToken 으로 토큰 유효성 검사
         if (isNoFilterURL || StringUtils.hasText(token) && jwtTokenProvider.validateToken(token)) {
             try {
-                // (추가) Redis 에 해당 accessToken logout 여부 확인
-                //String isLogout = (String) redisTemplate.opsForValue().get(token);
                 HashMap<String, Object> getToken = authMapper.getAccessToken(token);
 
                 if (getToken != null) {

@@ -1,45 +1,49 @@
-package com.iszion.api.mkt.service.impl;
+package com.iszion.api.coup.service.impl;
 
-import com.iszion.api.mkt.dao.MktDAO;
-import com.iszion.api.mkt.service.MktService;
+import com.iszion.api.coup.dao.CoupDAO;
+import com.iszion.api.coup.service.CoupService;
 import jakarta.annotation.Resource;
+import org.mybatis.spring.SqlSessionTemplate;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
-@Service("mktService")
-public class MktServiceImpl implements MktService {
 
-    @Resource(name = "mktDAO")
-    private MktDAO mktDAO;
+@Service("coupService")
+public class CoupServiceImpl implements CoupService {
+
+
+    @Resource(name = "coupDAO")
+    private CoupDAO coupDAO;
 
     @Override
     public Object selectQryOne(String queryId, Object searchObj) throws Exception {
-        return mktDAO.selectQryOne(queryId, searchObj);
+        return coupDAO.selectQryOne(queryId, searchObj);
     }
 
     @Override
     public List<?> selectQryList(String queryId, Object searchObj) throws Exception {
-        return mktDAO.selectQryList(queryId, searchObj);
+        return coupDAO.selectQryList(queryId, searchObj);
     }
 
     @Override
     public Object selectQryListCnt(String queryId, Object searchObj) throws Exception {
-        return mktDAO.selectQryListCnt(queryId, searchObj);
+        return coupDAO.selectQryListCnt(queryId, searchObj);
     }
 
     @Override
     public int insertQry(String queryId, Object searchObj) throws Exception {
-        return mktDAO.insertQry(queryId, searchObj);
+        return coupDAO.insertQry(queryId, searchObj);
     }
 
     @Override
     public int updateQry(String queryId, Object searchObj) throws Exception {
-        return mktDAO.updateQry(queryId, searchObj);
+        return coupDAO.updateQry(queryId, searchObj);
     }
 
     @Override
     public int deleteQry(String queryId, Object searchObj) throws Exception {
-        return mktDAO.deleteQry(queryId, searchObj);
+        return coupDAO.deleteQry(queryId, searchObj);
     }
 }

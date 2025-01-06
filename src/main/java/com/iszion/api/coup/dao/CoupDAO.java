@@ -1,16 +1,18 @@
-package com.iszion.api.mkt.dao;
+package com.iszion.api.coup.dao;
 
 import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
-@Repository("mktDAO")
-public class MktDAO {
+@Repository("coupDAO")
+public class CoupDAO {
 
     @Autowired
-    private SqlSessionTemplate sqlSessionTemplate;
+    @Qualifier("db2SqlSessionTemplate")
+    private SqlSessionTemplate db2SqlSessionTemplate;
 
     /**
      * 조회 한건
@@ -19,7 +21,7 @@ public class MktDAO {
      * @exception Exception
      */
     public Object selectQryOne(String queryId,Object searchObj) throws Exception {
-        return sqlSessionTemplate.selectOne(queryId, searchObj);
+        return db2SqlSessionTemplate.selectOne(queryId, searchObj);
     }
     /**
      * 조회리스트
@@ -28,8 +30,9 @@ public class MktDAO {
      * @exception Exception
      */
     public List<?> selectQryList(String queryId, Object searchObj) throws Exception {
-        return sqlSessionTemplate.selectList(queryId, searchObj);
+        return db2SqlSessionTemplate.selectList(queryId, searchObj);
     }
+
     /**
      * 조회리스트
      * @param
@@ -37,7 +40,7 @@ public class MktDAO {
      * @exception Exception
      */
     public Object selectQryListCnt(String queryId,Object searchObj) throws Exception {
-        return sqlSessionTemplate.selectOne(queryId, searchObj);
+        return db2SqlSessionTemplate.selectOne(queryId, searchObj);
     }
     /**
      * 입력
@@ -46,7 +49,7 @@ public class MktDAO {
      * @exception Exception
      */
     public int insertQry(String queryId,Object searchObj) throws Exception {
-        return sqlSessionTemplate.insert(queryId, searchObj);
+        return db2SqlSessionTemplate.insert(queryId, searchObj);
     }
     /**
      * 수정
@@ -55,7 +58,7 @@ public class MktDAO {
      * @exception Exception
      */
     public int updateQry(String queryId,Object searchObj) throws Exception {
-        return sqlSessionTemplate.update(queryId, searchObj);
+        return db2SqlSessionTemplate.update(queryId, searchObj);
     }
     /**
      *  삭제
@@ -64,6 +67,6 @@ public class MktDAO {
      * @exception Exception
      */
     public int deleteQry(String queryId,Object searchObj) throws Exception {
-        return sqlSessionTemplate.delete(queryId, searchObj);
+        return db2SqlSessionTemplate.delete(queryId, searchObj);
     }
 }

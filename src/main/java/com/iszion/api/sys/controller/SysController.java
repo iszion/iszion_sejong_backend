@@ -2787,9 +2787,4 @@ public class SysController {
         return jsonDataRtn;
     }
 
-    @GetMapping("dataTest")
-    public String dataTest(HttpServletRequest request, @RequestHeader("Authorization") String token) throws Exception {
-        Object result = sysService.selectQryList1("dataTest", null, "sejong");
-        return "";
-    }
 }

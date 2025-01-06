@@ -1532,7 +1532,5 @@
             WHERE USER_ID   =   #{item.userId}
         </foreach>
     </update>
-    <select id="dataTest" resultType="java.util.HashMap">
-        SELECT * FROM db_inenergy.BACCTB
-    </select>
+
 </mapper>

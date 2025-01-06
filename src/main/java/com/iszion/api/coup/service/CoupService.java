@@ -1,8 +1,8 @@
-package com.iszion.api.mkt.service;
+package com.iszion.api.coup.service;
 
 import java.util.List;
 
-public interface MktService {
+public interface CoupService {
     /**
      *
      * @param

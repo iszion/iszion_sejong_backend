@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.iszion.api.coup.dao.CoupDAO">
+
+    <!--
+     *************************************************************************************************
+     ***********   코업전산 접수테이블 항목 설명   ***********************************************************
+     *************************************************************************************************
+      ymd       // 출고일자     		- 19/09/05(년/월/일)
+      ccd       // 출판사코드   		- 출판사코드는 4자리 숫자이며 출판사(또는 코업로지스)에 확인하시면 됩니다.
+      sejem     // 서점코드     		- 출판사서점코드
+      chasu     // 차수         	    - 동일서점의 경우 주문 차수(최조 입력시 01, 동일서점 추가 입력시 02, 03, 04 ...)
+      dose      // 도서코드     		- 출판사도서코드
+      jenga     // 정가
+      busu      // 부수
+      yul       // 공급율
+      kum       // 총금액        	- 정가 X 부수 X 공급율 / 전송하신 출고금액 그대로 인쇄까지 사용됩니다.
+      gubun     // 구분          - (1) 일반출고 = 위탁 : 1 / 매절 : 2 / 현매 : 3 / 납품 : 4 / 증정 : 5 / 신간 : 6 / 위탁2 : 7 / 행사 : 8
+                //              - (2) 신간출고일 경우 9 로 보내시면 신간출고팀(물류팀) 작업이 됩니다.
+      bigo      // 비고          - 출고되는 서점에까지 전달되는 비고 / 거래명세서에까지 인쇄됩니다.
+      or_time   // 전송시간      	- 시:분:초 형식(14:36:15)
+      bunjem    // 분점          - 분점이 있는 경우 표기(없으면 빈값) - 코업로지스와 연동되어 있는 분점명입니다. (4자까지)
+      bigo_2    // 비고2         - 코업로지스에 전달하는 메모입니다. (출고시 주의나 요청사항의 전달)
+      lotno     // 출판사전표번호		- 출판사에서 사용하는 전표번호
+    -->
+
+    <!-- *************************************************************************************************  -->
+    <!-- ***********   sal2020  (코업 출고접수 쿼리)정보 DB SQL    *********************************************  -->
+    <!-- *************************************************************************************************  -->
+    <select id="dataTest" resultType="java.util.HashMap">
+     SELECT
+        ymd
+            , ccd
+            , sejem
+            , chasu
+            , dose
+        from dbo.RETU_BAN
+        where ccd = '0151'
+         AND ymd = '24/12/12'
+    </select>
+    <select id="sal2020_coup_select_list" resultType="java.util.HashMap">
+        SELECT
+               ymd
+             , ccd
+             , sejem
+             , chasu
+             , dose
+             , jenga
+             , busu
+             , yul
+             , kum
+             , gubun
+             , bigo
+             , or_time
+             , bunjem
+             , bigo_2
+             , lotno
+
+        FROM dbo.DELI_ORDER_TEST
+        WHERE ccd 		= 	'0106'
+          AND ymd 		=   #{paramDay}
+          AND sejem 	= 	#{paramCustCd}
+          AND bunjem 	= 	#{paramCustsCd}
+          AND chasu 	= 	#{paramCustSeq}
+        ORDER BY sejem ASC
+
+    </select>
+
+    <insert id="sal2020_coup_insert" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            INSERT INTO dbo.DELI_ORDER_TEST  (
+                  ymd
+                , ccd
+                , sejem
+                , chasu
+                , dose
+                , jenga
+                , busu
+                , yul
+                , kum
+                , gubun
+                , bigo
+                , or_time
+                , bunjem
+                , bigo_2
+                , lotno
+            ) VALUES (
+                  #{item.dealDayX }
+                , '0106'
+                , #{item.custCd }
+                , #{item.custSeq }
+                , #{item.prodCd }
+                , #{item.price }
+                , #{item.qty }
+                , #{item.yul }
+                , #{item.amt }
+                , #{item.dealFgX }
+                , #{item.remarksD }
+                , CONVERT(VARCHAR(8),GETDATE(),108)
+                , #{item.custsCd }
+                , #{item.remarksH }
+                , #{item.seq }
+            )
+        </foreach>
+    </insert>
+
+
+    <!-- *************************************************************************************************  -->
+    <!-- ***********   sal2030  (코업 반품전표  쿼리)정보 DB SQL    ********************************************  -->
+    <!-- *************************************************************************************************  -->
+
+    <select id="sal2030_coup_return_day_list"  resultType="java.util.HashMap">
+
+        SELECT '20'+ ymd as ymd
+          FROM dbo.RETU_BAN
+         WHERE ccd = '0106'  AND left(ymd, 5) = #{paramYyMm }
+         GROUP BY ymd;
+
+    </select>
+
+
+    <select id="sal2030_coup_return_list"  resultType="java.util.HashMap">
+
+        SELECT rtrim(sejem)			as	custCd
+             , rtrim(s_name)		as	custNm
+             , chasu				as	custSeq
+             , count(*) 		    as 	cnt
+             , sum(busu) 			as 	qty
+             , rtrim(bigo2) 		as	custsCd
+
+
+        FROM dbo.RETU_BAN
+        WHERE ccd = '0106'
+          AND ymd = #{paramDay }
+        GROUP BY sejem, s_name, chasu, bigo2
+        ORDER BY sejem, chasu
+
+    </select>
+
+    <select id="sal2030_select_return_list"  resultType="java.util.HashMap">
+
+        SELECT ymd				as	ymd
+             , CASE WHEN ymd != '' THEN
+                          '20' + left(ymd,2) + SUBSTRING(ymd, 4, 2) + right(ymd,2)
+                ELSE
+                        ''
+                END     dealDay
+             , sejem			as	custCd
+             , s_name			as	custNm
+             , chasu			as	custSeq
+             , dose				as	prodCd
+             , jenga			as	price
+             , busu				as	qty
+             , CASE WHEN s_ilja != '' THEN
+                        '20' + left(s_ilja,2) + SUBSTRING(s_ilja, 4, 2) + right(s_ilja,2)
+                ELSE
+                        ''
+                END     coupReturnDay
+            , bigo1				as	remarks
+        	, bigo2				as	custsCd
+        	, d_name 			as	prodNm
+            , '9'               as  divCd
+            , ''                as  receiptYn
+            , '00000000'        as  receiptDate
+            , '4021101'         as  dealFg  -- 위탁코드
+
+          FROM dbo.RETU_BAN
+          WHERE ccd 	= '0106'
+            AND ymd 	= #{paramDay }
+            AND sejem = #{paramCustCd }
+            AND chasu = #{paramCustSeq }
+            AND bigo2 = #{paramCustsCd }
+
+    </select>
+
+</mapper>
