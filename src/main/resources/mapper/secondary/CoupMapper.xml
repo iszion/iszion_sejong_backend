@@ -155,7 +155,7 @@
                         '20' + left(s_ilja,2) + SUBSTRING(s_ilja, 4, 2) + right(s_ilja,2)
                 ELSE
                         ''
-                END     coupReturnDay
+                END     returnDay
             , bigo1				as	remarks
         	, bigo2				as	custsCd
         	, d_name 			as	prodNm

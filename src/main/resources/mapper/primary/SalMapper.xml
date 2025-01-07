@@ -786,7 +786,13 @@
             , SUM(QTY)  as  sumQty
             , SUM(AMT)  as  sumAmt
           FROM SDEALDTB  dd
-         WHERE 1 = 1
+            -- 도서코드
+            left outer join SDEALHTB as dh ON dh.DEAL_DAY  = dd.DEAL_DAY AND dh.SEQ = dd.SEQ
+            left outer join MCUSTTB as mc ON mc.CUST_CD  = dh.CUST_CD
+            left outer join MPRODTB as mp  ON mp.PROD_CD = dd.PROD_CD
+            left outer join MCOMMTB as c1 ON c1.COMM_CD  = dd.DEAL_FG
+
+        WHERE 1 = 1
             AND dd.DEAL_DAY   BETWEEN #{paramPeriodFrom } AND #{paramPeriodTo }
             <if test='paramDealFg != null and paramDealFg != ""'>
                 AND dd.DEAL_FG = #{paramDealFg }
@@ -994,6 +1000,341 @@
 
               and  !(b.sale_ym = '000000' and b.sale_day = '00000000' and b.cust_nm ='일계')
               and  !(b.sale_ym = '000000' and b.sale_day = '월계')
+    </select>
+
+
+    <!-- 반품전표 현황 불러오기  -->
+    <select id="sal2130_maxPages" resultType="java.util.HashMap">
+        SELECT
+              count(*)  as maxPages
+            , SUM(QTY)  as  sumQty
+            , SUM(AMT)  as  sumAmt
+        FROM SDEALDTB  dd
+            -- 헤더
+            left outer join SDEALHTB as dh ON dh.DEAL_DAY = dd.DEAL_DAY	AND dh.SEQ = dd.SEQ
+            -- 거래처코드
+            left outer join MCUSTTB as mc ON mc.CUST_CD	= dh.CUST_CD
+            -- 도서코드
+            left outer join MPRODTB mp  ON mp.PROD_CD	=	dd.PROD_CD
+            -- 공통코드 (출고구분)
+            left outer join MCOMMTB as c1 ON c1.COMM_CD	=	dd.DEAL_FG
+
+        WHERE dd.DIV_CD = '9'
+          AND dd.DEAL_DAY   BETWEEN #{paramPeriodFrom } AND #{paramPeriodTo }
+            <if test='paramDealFg != null and paramDealFg != ""'>
+                AND dd.DEAL_FG = #{paramDealFg }
+            </if>
+            <if test='paramCustCd != null and paramCustCd != ""'>
+                AND dh.CUST_CD = #{paramCustCd }
+            </if>
+            <if test='paramProdCd != null and paramProdCd != ""'>
+                AND dd.PROD_CD = #{paramProdCd }
+            </if>
+            <if test='paramValue != null and paramValue != ""'>
+                AND ( dh.CUST_CD LIKE CONCAT( '%', #{paramValue }, '%' )
+                OR  mc.CUST_NM LIKE CONCAT( '%', #{paramValue }, '%')
+                OR  dd.REMARKS LIKE CONCAT( '%', #{paramValue }, '%')
+                OR  dd.PROD_CD LIKE CONCAT( '%', #{paramValue }, '%')
+                OR  mp.PROD_NM LIKE CONCAT( '%', #{paramValue }, '%')
+                )
+            </if>
+        ORDER BY dd.DEAL_DAY, dd.SEQ, dd.CNT
+
+    </select>
+
+    <select id="sal2130_list" resultType="java.util.HashMap">
+        SELECT    ROW_NUMBER() OVER (ORDER BY dd.DEAL_DAY, dd.SEQ, dd.CNT) as rowNum
+                , dd.DEAL_DAY	    as	dealDay
+                , dd.SEQ			as	seq
+                , dd.CNT			as	cnt
+                , dh.CUST_CD		as	custCd
+                , mc.CUST_NM		as	custNm
+                , dd.PROD_CD		as	prodCd
+                , mp.PROD_NM		as	prodNm
+                , dd.DEAL_FG		as	dealFg
+                , c1.COMM_NM		as	dealFgNm
+                , dd.QTY			as	qty
+                , dd.PRICE		    as	price
+                , dd.AMT			as	amt
+                , dd.YUL			as	yul
+                , dd.CUST_SEQ	    as	custSeq
+                , dd.CUSTS_CD	    as	custsCd
+                , dd.REMARKS		as	remarks
+                , dd.RETURN_DAY	    as	returnDay
+        FROM SDEALDTB dd
+            -- 헤더
+            left outer join SDEALHTB as dh ON dh.DEAL_DAY = dd.DEAL_DAY	AND dh.SEQ = dd.SEQ
+            -- 거래처코드
+            left outer join MCUSTTB as mc ON mc.CUST_CD	= dh.CUST_CD
+            -- 도서코드
+            left outer join MPRODTB mp  ON mp.PROD_CD	=	dd.PROD_CD
+            -- 공통코드 (출고구분)
+            left outer join MCOMMTB as c1 ON c1.COMM_CD	=	dd.DEAL_FG
+
+
+        WHERE dd.DIV_CD = '9'
+          AND dd.DEAL_DAY   BETWEEN #{paramPeriodFrom } AND #{paramPeriodTo }
+        <if test='paramDealFg != null and paramDealFg != ""'>
+            AND dd.DEAL_FG = #{paramDealFg }
+        </if>
+        <if test='paramCustCd != null and paramCustCd != ""'>
+            AND dh.CUST_CD = #{paramCustCd }
+        </if>
+        <if test='paramProdCd != null and paramProdCd != ""'>
+            AND dd.PROD_CD = #{paramProdCd }
+        </if>
+        <if test='paramValue != null and paramValue != ""'>
+            AND ( dh.CUST_CD LIKE CONCAT( '%', #{paramValue }, '%' )
+            OR  mc.CUST_NM LIKE CONCAT( '%', #{paramValue }, '%')
+            OR  dd.REMARKS LIKE CONCAT( '%', #{paramValue }, '%')
+            OR  dd.PROD_CD LIKE CONCAT( '%', #{paramValue }, '%')
+            OR  mp.PROD_NM LIKE CONCAT( '%', #{paramValue }, '%')
+            )
+        </if>
+        ORDER BY dd.DEAL_DAY, dd.SEQ, dd.CNT
+        LIMIT #{paramPageRows} OFFSET #{paramStartRowNum }
+    </select>
+
+    <!-- 반품전표 집계현황 불러오기  -->
+    <select id="sal2140_list" resultType="java.util.HashMap">
+        SELECT    ROW_NUMBER() OVER (ORDER BY dd.DEAL_DAY, dd.SEQ) as rowNum
+                , dd.DEAL_DAY	    as	dealDay
+                , dd.SEQ			as	seq
+                , dh.CUST_CD		as	custCd
+                , mc.CUST_NM		as	custNm
+                , count(dd.PROD_CD) as 	prodCnt
+                , SUM(dd.qty) 		as  sumQty
+                , SUM(dd.AMT) 		as  sumAmt
+                , dd.RETURN_DAY		as	returnDay
+        FROM SDEALDTB dd
+            -- 헤더
+            left outer join SDEALHTB as dh ON dh.DEAL_DAY = dd.DEAL_DAY	AND dh.SEQ = dd.SEQ
+            -- 거래처코드
+            left outer join MCUSTTB as mc ON mc.CUST_CD	= dh.CUST_CD
+
+
+        WHERE dd.DIV_CD = '9'
+          AND dd.DEAL_DAY   BETWEEN #{paramPeriodFrom } AND #{paramPeriodTo }
+        <if test='paramCustCd != null and paramCustCd != ""'>
+            AND dh.CUST_CD = #{paramCustCd }
+        </if>
+        <if test='paramProdCd != null and paramProdCd != ""'>
+            AND dd.PROD_CD = #{paramProdCd }
+        </if>
+        GROUP BY dd.DEAL_DAY, dd.SEQ
+    </select>
+
+    <!-- 도서별 판매현황 불러오기  -->
+    <select id="sal2150_list" resultType="java.util.HashMap">
+        SELECT    st.PROD_CD                   as  prodCd
+                , mp.PROD_NM                   as  prodNm
+                , SUM(IFNULL(st.I_QTY, 0))     as  iQty
+                , SUM(IFNULL(st.O_QTY, 0))     as  oQty
+                , SUM(IFNULL(st.oj_QTY, 0))    as  ojQty
+                , SUM(IFNULL(st.OB_QTY, 0))    as  obQty
+                , SUM(IFNULL(st.OX_QTY, 0))    as  oxQty
+                , SUM(IFNULL(st.O_AMT, 0))     as  oAmt
+                , SUM(IFNULL(st.OB_AMT, 0))    as  obAmt
+        FROM SSTOCKTB st
+            left join MPRODTB mp ON mp.PROD_CD = st.PROD_CD
+
+        WHERE st.STOCK_DAY BETWEEN #{paramPeriodFrom } AND #{paramPeriodTo }
+            AND NOT(st.I_QTY=0 AND st.O_QTY=0 AND st.OB_QTY=0 AND st.OJ_QTY=0 AND st.OX_QTY=0 AND st.O_AMT=0 AND st.OB_AMT=0)
+        <if test='paramProdCd != null and paramProdCd != ""'>
+            AND st.PROD_CD = #{paramProdCd }
+        </if>
+        GROUP BY st.PROD_CD
+
+    </select>
+
+    <select id="sal2150_select_list" resultType="java.util.HashMap">
+        SELECT     a.cust_cd           as  custCd
+                 , mc.CUST_NM          as  custNm
+                 , SUM(a.i_qty)        as  iQty
+                 , SUM(a.o_qty)        as  oQty
+                 , SUM(a.oj_qty)       as  ojQty
+                 , SUM(a.ob_qty)       as  obQty
+                 , SUM(a.ox_qty)       as  oxQty
+                 , SUM(a.o_amt)        as  oAmt
+                 , SUM(a.ob_amt)       as  obAmt
+        FROM (
+                 SELECT  bd.CUST_CD             as  cust_cd
+                      , ifnull(bd.QTY, 0)       as  i_qty
+                      , 0                       as  o_qty
+                      , 0                       as  oj_qty
+                      , 0                       as  ob_qty
+                      , 0                       as  ox_qty
+                      , 0                       as  o_amt
+                      , 0                       as  ob_amt
+                 FROM SBUYDTB bd
+
+                 WHERE bd.BUY_DAY BETWEEN #{paramPeriodFrom } AND #{paramPeriodTo }
+                   AND bd.PROD_CD = #{paramProdCd }
+                   AND bd.QTY != 0
+
+                 UNION ALL
+
+                 SELECT    dd.CUST_CD                                                                           as  cust_cd
+                         , 0                                                                                    as  i_qty
+                         , if(dd.DIV_CD='1', if(substring(dd.DEAL_FG,4,2) = '11', ifnull(dd.QTY, 0), 0),0)      as  o_qty	-- 출고
+                         , if(dd.DIV_CD='1', if(dd.DEAL_FG = '4021205', ifnull(dd.QTY, 0), 0),0)             	as  oj_qty	-- 증정
+                         , if(dd.DIV_CD='9', ifnull(dd.QTY, 0),0)                                               as  ob_qty	-- 반품
+                         , if(dd.DIV_CD='1', if(RIGHT(dd.DEAL_FG,4) = '1990', ifnull(dd.QTY, 0), 0),0)          as  ox_qty  -- 폐기
+                         , if(dd.DIV_CD='1', if(substring(dd.DEAL_FG,4,2) = '11', ifnull(dd.AMT, 0), 0),0)      as  o_amt	-- 출고금액
+                         , if(dd.DIV_CD='9', ifnull(dd.AMT, 0),0)       	                                    as  ob_amt	-- 반품금액
+                 FROM SDEALDTB dd
+
+                 WHERE dd.DEAL_DAY BETWEEN  #{paramPeriodFrom } AND #{paramPeriodTo }
+                   AND dd.PROD_CD = #{paramProdCd }
+                   AND NOT(dd.QTY=0 AND dd.AMT=0)
+                    <if test='paramCustCd != null and paramCustCd != ""'>
+                        AND dd.CUST_CD = #{paramCustCd }
+                    </if>
+             ) a
+                 left join MCUSTTB mc ON  mc.CUST_CD = a.cust_cd
+        GROUP BY a.cust_cd
+        ORDER BY a.cust_cd
+
+    </select>
+
+    <!-- 거래처별 판매현황 불러오기  -->
+    <select id="sal2160_list" resultType="java.util.HashMap">
+        SELECT     a.cust_cd            as  custCd
+                 , mc.CUST_NM           as  custNm
+                 , sum(a.i_qty)         as  iQty
+                 , sum(a.o_qty)         as  oQty
+                 , sum(a.oj_qty)        as  ojQty
+                 , sum(a.ob_qty)        as  obQty
+                 , sum(a.ox_qty)        as  oxQty
+                 , sum(a.oz_qty)        as  ozQty
+                 , sum(a.o_amt)         as  oAmt
+                 , sum(a.ob_amt)        as  obAmt
+        FROM (
+                 SELECT  bd.cust_cd                 as  cust_cd
+                      , ifnull(bd.QTY, 0)    	    as  i_qty
+                      , 0                           as  o_qty
+                      , 0                           as  oj_qty
+                      , 0                           as  ob_qty
+                      , 0                           as  ox_qty
+                      , 0                           as  oz_qty
+                      , 0                           as  o_amt
+                      , 0                           as  ob_amt
+                 FROM SBUYDTB bd
+
+                 WHERE bd.BUY_DAY BETWEEN #{paramPeriodFrom } AND #{paramPeriodTo }
+                   AND bd.QTY != 0
+                    <if test='paramCustCd != null and paramCustCd != ""'>
+                        AND bd.CUST_CD = #{paramCustCd }
+                    </if>
+             UNION ALL
+                 SELECT  dd.cust_cd                                                                            	    as  cust_cd
+                         , 0                                                                                   	    as  i_qty
+                         , if(dd.DIV_CD='1', if(substring(dd.DEAL_FG,4,2)  = '11', ifnull(dd.QTY, 0), 0),0) 		as  o_qty
+                         , if(dd.DIV_CD='1', if(dd.DEAL_FG = '4021205', ifnull(dd.QTY, 0), 0),0)             		as  oj_qty
+                         , if(dd.DIV_CD='9' AND dd.DEAL_FG != '4021980', ifnull(dd.QTY, 0),0)                		as  ob_qty
+                         , if(dd.DIV_CD='1', if(dd.DEAL_FG = '4021990', ifnull(dd.QTY, 0), 0),0)             		as  ox_qty
+                         , if(dd.DEAL_FG='4021980', if(dd.DIV_CD='1', ifnull(dd.QTY, 0),0-ifnull(dd.QTY, 0)),0)     as  oz_qty
+                         , if(dd.DIV_CD='1', if(substring(dd.DEAL_FG,4,2)  = '11', ifnull(dd.AMT, 0), 0),0)      	as  o_amt
+                         , if(dd.DIV_CD='9' AND dd.DEAL_FG != '4021980', ifnull(dd.AMT, 0),0)                       as  ob_amt
+                 FROM SDEALDTB dd
+
+                 WHERE dd.DEAL_DAY BETWEEN  #{paramPeriodFrom } AND #{paramPeriodTo }
+                   AND NOT(dd.QTY=0 AND dd.AMT=0)
+                    <if test='paramProdCd != null and paramProdCd != ""'>
+                        AND dd.CUST_CD = #{paramCustCd }
+                    </if>
+             ) a
+                 left join MCUSTTB mc ON  mc.CUST_CD = a.cust_cd
+        GROUP BY a.cust_cd
+        ORDER BY a.cust_cd
+
+    </select>
+
+    <select id="sal2160_select_list" resultType="java.util.HashMap">
+        SELECT     a.prod_cd            as  prodCd
+                 , mp.PROD_NM           as  prodNm
+                 , sum(a.i_qty)         as  iQty
+                 , sum(a.o_qty)         as  oQty
+                 , sum(a.oj_qty)        as  ojQty
+                 , sum(a.ob_qty)        as  obQty
+                 , sum(a.ox_qty)        as  oxQty
+                 , sum(a.oz_qty)        as  ozQty
+                 , sum(a.o_amt)         as  oAmt
+                 , sum(a.ob_amt)        as  obAmt
+        FROM (
+                 SELECT    bd.PROD_CD                 	as  prod_cd
+                          , ifnull(bd.QTY, 0)    		as  i_qty
+                          , 0                          	as  o_qty
+                          , 0                          	as  oj_qty
+                          , 0                          	as  ob_qty
+                          , 0                          	as  ox_qty
+                          , 0                          	as  oz_qty
+                          , 0                          	as  o_amt
+                          , 0                          	as  ob_amt
+                 FROM SBUYDTB bd
+
+                 WHERE bd.BUY_DAY BETWEEN #{paramPeriodFrom } AND #{paramPeriodTo }
+                   AND bd.CUST_CD = #{paramCustCd }
+                   AND bd.QTY != 0
+             UNION ALL
+                 SELECT    dd.PROD_CD	                                                                          	as  prod_cd
+                         , 0                                                                                     	as  i_qty
+                         , if(dd.div_cd='1', if(substring(dd.DEAL_FG,4,2) = '11', ifnull(dd.QTY, 0), 0),0)      	as  o_qty
+                         , if(dd.div_cd='1', if(dd.DEAL_FG = '4021205', ifnull(dd.QTY, 0), 0),0)             		as  oj_qty
+                         , if(dd.div_cd='9' AND dd.DEAL_FG != '4021980', ifnull(dd.QTY, 0),0)                		as  ob_qty
+                         , if(dd.div_cd='1', if(dd.DEAL_FG = '4021990', ifnull(dd.QTY, 0), 0),0)             		as  ox_qty
+                         , if(dd.DEAL_FG='4021980', if(dd.div_cd='1', ifnull(dd.QTY, 0),0-ifnull(dd.QTY, 0)),0)	    as  oz_qty
+                         , if(dd.div_cd='1', if(substring(dd.DEAL_FG,4,2) = '11', ifnull(dd.AMT, 0), 0),0)      	as  o_amt
+                         , if(dd.div_cd='9' AND dd.DEAL_FG != '4021980', ifnull(dd.AMT, 0),0)                       as  ob_amt
+                 FROM SDEALDTB dd
+
+                 WHERE dd.DEAL_DAY BETWEEN #{paramPeriodFrom } AND #{paramPeriodTo }
+                   AND dd.CUST_CD = #{paramCustCd }
+                   AND NOT(dd.QTY=0 AND dd.AMT=0)
+                    <if test='paramProdCd != null and paramProdCd != ""'>
+                        AND dd.PROD_CD = #{paramProdCd }
+                    </if>
+             ) a
+                 left join MPRODTB mp ON mp.PROD_CD = a.prod_cd
+        GROUP BY a.prod_cd
+        ORDER BY a.prod_cd
+
+    </select>
+
+    <!-- 업체지점 판매현황 불러오기  -->
+    <select id="sal2170_list" resultType="java.util.HashMap">
+        SELECT     IFNULL(a.custs_cd, '총계') 				as 	custsCd
+                 , IFNULL(a.prod_cd, '지점계') 				as 	prodCd
+                 , IFNULL(mp.PROD_NM, '소계') 				as 	prodNm
+                 , SUM(a.o_qty) 							as 	oQty
+                 , SUM(a.oj_qty) 							as 	ojQty
+                 , SUM(a.ob_qty) 							as 	obQty
+                 , SUM(a.ox_qty) 							as 	oxQty
+                 , SUM(a.oz_qty) 							as 	ozQty
+                 , SUM(a.o_amt) 							as 	oAmt
+                 , SUM(a.ob_amt) 							as 	obAmt
+        FROM (
+                 SELECT
+                        dd.custs_cd 																					as 	custs_cd
+                      , dd.PROD_CD 																					    as 	prod_cd
+                      , IF(dd.DIV_CD = '1', IF(substring(dd.DEAL_FG,4,2) = '11', IFNULL(dd.QTY, 0), 0), 0) 			    as 	o_qty
+                      , IF(dd.DIV_CD = '1', IF(dd.DEAL_FG = '4021205', IFNULL(dd.QTY, 0), 0), 0) 						as 	oj_qty
+                      , IF(dd.DIV_CD = '9' AND dd.DEAL_FG != '4021980', IFNULL(dd.QTY, 0), 0) 						    as 	ob_qty
+                      , IF(dd.DIV_CD = '1', IF(dd.DEAL_FG = '4021990', IFNULL(dd.QTY, 0), 0), 0) 						as 	ox_qty
+                      , IF(dd.DEAL_FG = '4021980', IF(dd.DIV_CD = '1', IFNULL(dd.QTY, 0), 0 - IFNULL(dd.QTY, 0)), 0)    as 	oz_qty
+                      , IF(dd.DIV_CD = '1', IF(substring(dd.DEAL_FG,4,2) = '11', IFNULL(dd.AMT, 0), 0), 0) 			    as 	o_amt
+                      , IF(dd.DIV_CD = '9' AND dd.DEAL_FG != '4021980', IFNULL(dd.AMT, 0), 0) 						    as 	ob_amt
+                 FROM SDEALDTB dd
+
+                 WHERE dd.DEAL_DAY BETWEEN  #{paramPeriodFrom } AND #{paramPeriodTo }
+                   AND dd.CUST_CD = #{paramCustCd }
+                   AND NOT(dd.QTY=0 AND dd.AMT=0)
+             ) a
+
+                 LEFT JOIN MPRODTB mp ON mp.PROD_CD = a.prod_cd
+
+        GROUP BY a.custs_cd, a.prod_cd WITH ROLLUP
+
     </select>
 
 </mapper>
