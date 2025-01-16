@@ -1337,4 +1337,598 @@
 
     </select>
 
+    <!-- 매출액명세서(월) 불러오기  -->
+    <select id="sal2180_list" resultType="java.util.HashMap">
+        SELECT
+               a.cust_cd                        as  custCd   -- 거래처코드
+             , mc.CUST_NM                       as  custNm   -- 거래처명
+             , SUM(o_qty)                       as  oQty     -- 출고수량
+             , SUM(a.o_amt)                     as  oAmt    -- 출고금액
+             , SUM(a.j_qty)                     as  jQty     -- 증정수량
+             , SUM(a.b_qty)                     as  bQty     -- 반품수량
+             , SUM(a.b_amt)                     as  bAmt     -- 반품금액
+             , SUM(a.o_amt) - SUM(a.b_amt)      as  sAmt     -- 매출금액
+        FROM (
+                 SELECT CUST_CD                                              -- 거래처코드
+                      ,IF(IFNULL(DIV_CD, '0') = '1', IF(DEAL_FG != '4021205', QTY, 0), 0) 	as 	o_qty        -- 출고수량
+                      ,IF(IFNULL(DIV_CD, '0') = '1', IF(DEAL_FG != '4021205', AMT, 0), 0) 	as 	o_amt        -- 출고금액
+                      ,IF(IFNULL(DIV_CD, '0') = '9' AND DEAL_FG != '4021980', QTY, 0) 		as 	b_qty        -- 반품수량
+                      ,IF(IFNULL(DIV_CD, '0') = '9' AND DEAL_FG != '4021980', AMT, 0) 		as 	b_amt        -- 반품금액
+                      ,IF(IFNULL(DIV_CD, '0') = '1', IF(DEAL_FG = '4021205',  QTY, 0), 0) 	as 	j_qty        -- 증정
+
+                 FROM SDEALDTB
+                 WHERE LEFT(DEAL_DAY, 6) = CONCAT(#{paramYear}, #{paramMonth})         -- 해당월
+                   AND DEAL_FG != '4021980'
+             ) a
+                 -- 거래처코드
+                 left outer join MCUSTTB as mc ON mc.CUST_CD  = a.cust_cd
+
+        GROUP BY a.cust_cd
+        ORDER BY a.cust_cd
+
+    </select>
+
+    <!-- 전자계산서자료 양식  -->
+    <select id="sal2190_list" resultType="java.util.HashMap">
+        SELECT
+               a.cust_cd                       as  custCd       -- 거래처코드
+             , mc.CUST_BUSIN_NM                as  custBusinNm  -- 거래처명
+             , mc.CUST_BUSIN_NO                as  custBusinNo  -- 거래처 사업자등록번호
+             , mc.CUST_OWNER                   as  custOwner    -- 거래처 대표자
+             , mc.BILL_EMAIL                   as  custEmail1   -- 거래처 이메일1
+             , ''                              as  custEmail2   -- 거래처 이메일2
+             , mc.CUST_ADDR1                   as  custAddr     -- 거래처 소재지
+             , mc.CUST_COND                    as  custCond     -- 거래처 업태
+             , mc.CUST_KIND                    as  custKind     -- 거래처 종목
+             , ''                              as  custJongNo   -- 거래처 종사업장번호
+             , ''                              as  custReamrks  -- 거래처 비고
+
+             , SUM(a.o_amt) - SUM(a.b_amt)     as  sAmt         -- 매출금액
+
+             , #{paramCompZone.businNm }            as  compBusinNm     -- 공급자 상호
+             , #{paramCompZone.businNo }            as  compBusinNo     -- 공급자 사업자등록번호
+             , #{paramCompZone.businOwner }         as  compBusinOwner  -- 공급자 대표
+             , #{paramCompZone.businEmail }         as  compBusinEmail  -- 공급자 이메일
+             , #{paramCompZone.businAddr }          as  compBusinAddr   -- 공급자 소재지
+             , #{paramCompZone.businCond }          as  compBusinCond   -- 공급자 업태
+             , #{paramCompZone.businKind }          as  compBusinKind   -- 공급자 종목
+             , #{paramCompZone.billJongNo }         as  compJongNo  -- 공급자 종사업장 번호
+             , ''                                   as  compRemarks     -- 공급자 비고
+
+             , #{paramCompZone.billDiv }            as  billDiv         -- 계산서종류
+             , #{paramCompZone.billDay }            as  billDay         -- 발행일
+             , #{paramCompZone.billFg }             as  billFg          -- 영수,청구
+
+             , RIGHT(#{paramCompZone.billDay}, 2)   as  DD1             -- 발행일자1
+             , #{paramCompZone.billProdNm }         as  prodNm1         -- 품목1
+             , ''                                   as  prodSz1         -- 규격1
+             , ''                                   as  qty1            -- 수량1
+             , ''                                   as  price1          -- 단가1
+             , SUM(a.o_amt) - SUM(a.b_amt)          as  amt1            -- 공급가액1
+
+             , ''                                   as  remarks1        -- 품목비고1
+
+             , ''                                   as  DD2             -- 발행일자2
+             , ''                                   as  prodNm2         -- 품목2
+             , ''                                   as  prodSz2         -- 규격2
+             , ''                                   as  qty2            -- 수량2
+             , ''                                   as  price2          -- 단가2
+             , ''                                   as  amt2            -- 공급가액2
+             , ''                                   as  remarks2        -- 품목비고2
+
+             , ''                                   as  DD3             -- 발행일자3
+             , ''                                   as  prodNm3         -- 품목3
+             , ''                                   as  prodSz3         -- 규격3
+             , ''                                   as  qty3            -- 수량3
+             , ''                                   as  price3          -- 단가3
+             , ''                                   as  amt3            -- 공급가액3
+             , ''                                   as  remarks3        -- 품목비고3
+
+             , ''                                   as  DD4             -- 발행일자4
+             , ''                                   as  prodNm4         -- 품목4
+             , ''                                   as  prodSz4         -- 규격4
+             , ''                                   as  qty4            -- 수량4
+             , ''                                   as  price4          -- 단가4
+             , ''                                   as  amt4            -- 공급가액4
+             , ''                                   as  remarks4        -- 품목비고4
+
+             , ''                                   as  xAmt1            -- 현금
+             , ''                                   as  xAmt2            -- 수표
+             , ''                                   as  xAmt3            -- 어음
+             , ''                                   as  xAmt4            -- 외상미수금
+
+        FROM (
+                 SELECT 	CUST_CD                                              -- 거래처코드
+                      , IF(IFNULL(DIV_CD, '0') = '1', IF(IFNULL(DEAL_FG,'0000000') != '4021205', QTY, 0), 0) 	as 	o_qty	-- 출고수량
+                      , IF(IFNULL(DIV_CD, '0') = '1', IF(IFNULL(DEAL_FG,'0000000') != '4021205', AMT, 0), 0) 	as 	o_amt   -- 출고금액
+                      , IF(IFNULL(DIV_CD, '0') = '9',                                        	 QTY, 0) 	    as 	b_qty   -- 반품수량
+                      , IF(IFNULL(DIV_CD, '0') = '9',                                          	 AMT, 0) 	    as 	b_amt   -- 반품금액
+                      , IF(IFNULL(DIV_CD, '0') = '1', IF(IFNULL(DEAL_FG,'0000000') = '4021205',  QTY, 0), 0) 	as 	j_qty   -- 증정
+
+                 FROM SDEALDTB
+                 where left(DEAL_DAY, 6) = CONCAT(#{paramYear}, #{paramMonth})  -- 해당년월
+                   AND CUST_CD != '00001' AND CUST_CD != '00008'	-- 본사,현매 제외
+             ) a
+
+                 -- 거래처코드
+                 left outer join MCUSTTB as mc ON mc.CUST_CD  = a.cust_cd
+
+        where 1=1
+
+            <if test='paramBillYn != null and paramBillYn != ""'>
+                AND mc.BILL_YN = 'Y'
+            </if>
+
+        group by a.cust_cd
+        order by a.cust_cd
+
+    </select>
+
+    <!-- 입금전표 관리  -->
+    <select id="sal3010_list" resultType="java.util.HashMap">
+        SELECT
+               ac.ACC_DAY		as	accDay
+             , ac.ACC_DAY   	as  oldAccDay
+             , ac.SEQ			as	seq
+             , ac.SEQ			as	oldSeq
+             , ac.CUST_CD		as	custCd
+             , ac.ACC_FG		as	accFg
+            -- , CASE WHEN ac.ACC_FG = '1'  THEN '현금'
+            --        WHEN ac.ACC_FG = '2'  THEN '어음'
+            --        WHEN ac.ACC_FG = '3'  THEN '은행'
+            --        WHEN ac.ACC_FG = '4'  THEN '카드'
+            --        WHEN ac.ACC_FG = '5'  THEN '공제'
+            --        WHEN ac.ACC_FG = '9'  THEN '기타'
+            --        ELSE ''
+            -- END 				as 	accFgNm
+             , mc.CUST_NM		as	custNm
+             , ac.AMT		    as	amt
+             , ac.REMARKS		as	remarks
+             ,'R'       		as  iuD
+        FROM SACCTB as ac
+                 -- 거래처코드
+                 left outer join MCUSTTB as mc ON mc.CUST_CD  = ac.CUST_CD
+
+        WHERE left(ac.ACC_DAY, 6) =  CONCAT(#{paramYear}, #{paramMonth})
+        <if test='paramValue != null and paramValue != ""'>
+            AND ( ac.CUST_CD LIKE CONCAT( '%', #{paramValue }, '%' )
+            OR  ac.ACC_DAY LIKE CONCAT( '%', #{paramValue }, '%')
+            OR  mc.CUST_NM LIKE CONCAT( '%', #{paramValue }, '%')
+            OR  ac.AMT LIKE CONCAT( '%', #{paramValue }, '%')
+            OR  ac.REMARKS LIKE CONCAT( '%', #{paramValue }, '%')
+            )
+        </if>
+
+
+        ORDER BY SEQ DESC, ACC_DAY DESC
+
+    </select>
+
+
+    <insert id="sal3010_insert" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            INSERT INTO SACCTB
+                (
+                      ACC_DAY
+                    , SEQ
+                    , CUST_CD
+                    , ACC_FG
+                    , AMT
+                    , REMARKS
+                    , REG_DATE
+                    , REG_ID
+                    , UPDATE_DATE
+                    , UPDATE_ID
+                ) VALUES (
+                      #{item.accDay}
+                    , #{item.seq}
+                    , #{item.custCd}
+                    , #{item.accFg}
+                    , #{item.amt}
+                    , #{item.remarks}
+                    , NOW()
+                    , #{userId}
+                    , NOW()
+                    , #{userId}
+                )
+        </foreach>
+    </insert>
+
+    <update id="sal3010_update" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            UPDATE SACCTB
+                SET
+                      ACC_DAY       =   #{item.accDay}
+                    , CUST_CD       =   #{item.custCd}
+                    , ACC_FG        =   #{item.accFg}
+                    , AMT           =   #{item.amt}
+                    , REMARKS       =   #{item.remarks}
+                    , UPDATE_DATE   =   NOW()
+                    , UPDATE_ID     =   #{userId}
+                WHERE ACC_DAY       =   #{item.oldAccDay}
+                  AND SEQ           =   #{item.oldSeq}
+        </foreach>
+    </update>
+
+    <delete id="sal3010_delete" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            DELETE FROM SACCTB
+              WHERE ACC_DAY         =   #{item.accDay}
+                AND SEQ             =   #{item.seq}
+        </foreach>
+    </delete>
+
+    <select id="sal3010_select_bill" resultType="java.util.HashMap">
+        SELECT
+               bi.BILL_SEQ      as  billSeq
+             , bi.BILL_NO       as  billNo
+             , bi.DIV_CD        as  divCd
+             , bi.PUB_COMP      as  pubComp
+             , bi.PUB_NM        as  pubNm
+             , bi.PUB_DAY       as  pubDay
+             , bi.REC_DAY       as  recDay
+             , bi.PAY_DAY       as  payDay
+             , bi.PAY_BANK      as  payBank
+             , bi.PAY_POINT     as  payPoint
+             , bi.PAY_COMP      as  payComp
+             , bi.END_DAY       as  endDay
+             , bi.BILL_AMT      as  billAmt
+             , bi.YUL           as  yul
+             , bi.YUL_AMT       as  yulAmt
+             , bi.REMARKS       as  remarks
+             , bi.ACC_DAY       as  accDay
+             , bi.SEQ           as  seq
+             , bi.REG_DATE      as  regDate
+             , bi.REG_ID        as  regId
+             , bi.UPDATE_DATE   as  updateDate
+             , bi.UPDATE_ID     as  updateId
+
+             , 'R'              as  iuD
+        FROM SBILLTB as bi
+
+        where 1=1
+
+          AND bi.ACC_DAY    =   #{paramAccDay }
+          AND bi.SEQ        =   #{paramSeq }
+    </select>
+
+    <insert id="sal3010_insert_bill" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            INSERT INTO SBILLTB    (
+                  BILL_SEQ
+                , BILL_NO
+                , DIV_CD
+                , PUB_COMP
+                , PUB_NM
+                , PUB_DAY
+                , REC_DAY
+                , PAY_DAY
+                , PAY_BANK
+                , PAY_POINT
+                , PAY_COMP
+                , END_DAY
+                , BILL_AMT
+                , YUL
+                , YUL_AMT
+                , REMARKS
+                , ACC_DAY
+                , SEQ
+                , REG_DATE
+                , REG_ID
+                , UPDATE_DATE
+                , UPDATE_ID
+            ) VALUES (
+                  (SELECT IFNULL(MAX(b.BILL_SEQ) + 1, 1) FROM SBILLTB b)
+                , #{item.billNo }
+                , #{item.divCd }
+                , #{item.pubComp }
+                , #{item.pubNm }
+                , #{item.pubDay }
+                , #{item.recDay }
+                , #{item.payDay }
+                , #{item.payBank }
+                , #{item.payPoint }
+                , #{item.payComp }
+                , #{item.endDay }
+                , #{item.billAmt }
+                , #{item.yul }
+                , #{item.yulAmt }
+                , #{item.remarks }
+                , #{item.accDay }
+                , #{item.seq }
+                , now()
+                , #{userId}
+                , now()
+                , #{userId}
+            )
+        </foreach>
+    </insert>
+
+    <update id="sal3010_update_bill" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            UPDATE SBILLTB
+                SET
+                      BILL_NO        =   #{item.billNo }
+                    , DIV_CD         =   #{item.divCd }
+                    , PUB_COMP       =   #{item.pubComp }
+                    , PUB_NM         =   #{item.pubNm }
+                    , PUB_DAY        =   #{item.pubDay }
+                    , REC_DAY        =   #{item.recDay }
+                    , PAY_DAY        =   #{item.payDay }
+                    , PAY_BANK       =   #{item.payBank }
+                    , PAY_POINT      =   #{item.payPoint }
+                    , PAY_COMP       =   #{item.payComp }
+                    , END_DAY        =   #{item.endDay }
+                    , BILL_AMT       =   #{item.billAmt }
+                    , YUL            =   #{item.yul }
+                    , YUL_AMT        =   #{item.yulAmt }
+                    , REMARKS        =   #{item.remarks }
+                    , ACC_DAY        =   #{item.accDay }
+                    , SEQ            =   #{item.seq }
+                    , UPDATE_DATE    =   now()
+                    , UPDATE_ID      =   #{userid}
+
+            WHERE BILL_SEQ      =   #{item.billSeq }
+        </foreach>
+    </update>
+
+    <delete id="sal3010_delete_bill" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            DELETE FROM SBILLTB
+              WHERE BILL_SEQ        =   #{item.billSeq}
+        </foreach>
+    </delete>
+
+    <!-- 어음전표 관리  -->
+    <select id="sal3020_list" resultType="java.util.HashMap">
+        SELECT
+              bi.BILL_SEQ      as  billSeq
+            , bi.BILL_NO       as  billNo
+            , bi.DIV_CD        as  divCd
+            , bi.PUB_COMP      as  pubComp
+            , bi.PUB_NM        as  pubNm
+            , bi.PUB_DAY       as  pubDay
+            , bi.REC_DAY       as  recDay
+            , bi.PAY_DAY       as  payDay
+            , bi.PAY_BANK      as  payBank
+            , bi.PAY_POINT     as  payPoint
+            , bi.PAY_COMP      as  payComp
+            , bi.END_DAY       as  endDay
+            , bi.BILL_AMT      as  billAmt
+            , bi.YUL           as  yul
+            , bi.YUL_AMT       as  yulAmt
+            , bi.REMARKS       as  remarks
+            , bi.ACC_DAY       as  accDay
+            , bi.SEQ           as  seq
+            , bi.REG_DATE      as  regDate
+            , bi.REG_ID        as  regId
+            , bi.UPDATE_DATE   as  updateDate
+            , bi.UPDATE_ID     as  updateId
+
+            , 'R'              as  iuD
+        FROM SBILLTB as bi
+
+        WHERE left(bi.ACC_DAY, 4) =  #{paramYear}
+        <if test='paramValue != null and paramValue != ""'>
+            AND ( bi.PUB_COMP LIKE CONCAT( '%', #{paramValue }, '%' )
+            OR  bi.PUB_DAY LIKE CONCAT( '%', #{paramValue }, '%')
+            OR  bi.END_DAY LIKE CONCAT( '%', #{paramValue }, '%')
+            OR  bi.BILL_AMT LIKE CONCAT( '%', #{paramValue }, '%')
+            OR  bi.REMARKS LIKE CONCAT( '%', #{paramValue }, '%')
+            )
+        </if>
+
+
+        ORDER BY ACC_DAY DESC
+
+    </select>
+
+    <!-- 매출수금집계조회(월) 관리  -->
+    <select id="sal3110_list" resultType="java.util.HashMap">
+        SET @w_amt := 0;
+
+        SELECT
+              a.SALE_DAY	            AS  saleDay
+            , IFNULL(a.o_qty, 0)        AS  oQty
+            , IFNULL(a.o_amt, 0)        AS  oAmt
+            , IFNULL(a.oj_qty, 0)       AS  ojQty
+            , IFNULL(a.oj_amt, 0)       AS  ojAmt
+            , IFNULL(a.ob_qty, 0)       AS  obQty
+            , IFNULL(a.ob_amt, 0)       AS  obAmt
+            , IFNULL(a.in_amt, 0)       AS  inAmt
+            , @w_amt := @w_amt
+                    + IFNULL(a.o_amt, 0)
+                    - IFNULL(a.ob_amt, 0)
+                    - IFNULL(a.in_amt, 0)       AS  jAmt
+            , ''                        AS  remarks
+        FROM (
+                -- 과거 데이터 집계
+                SELECT
+                      CONCAT(#{paramYear}, #{paramMonth}, '00') 	AS 	sale_day
+                    , 0                      	AS 	o_qty
+                    , 0                      	AS 	o_amt
+                    , 0                      	AS 	oj_qty
+                    , 0                      	AS 	oj_amt
+                    , 0                      	AS	ob_qty
+                    , 0                      	AS 	ob_amt
+                    , 0                      	AS 	in_amt
+                    , @w_amt := IFNULL(SUM(O_AMT), 0) - IFNULL(SUM(OB_AMT), 0) - IFNULL(SUM(IN_AMT), 0) 	AS 	initial_j_amt
+                FROM STSALETB
+                WHERE CUST_CD = #{paramCustCd }
+                AND LEFT(SALE_DAY, 6)   <![CDATA[<]]>    CONCAT(#{paramYear}, #{paramMonth})
+
+            UNION ALL
+
+                -- 현재 월 데이터
+                SELECT
+                      SALE_DAY
+                    , IFNULL(SUM(O_QTY), 0) 	AS 	o_qty
+                    , IFNULL(SUM(O_AMT), 0) 	AS 	o_amt
+                    , IFNULL(SUM(OJ_QTY), 0) 	AS 	oj_qty
+                    , IFNULL(SUM(OJ_AMT), 0) 	AS 	oj_amt
+                    , IFNULL(SUM(OB_QTY), 0) 	AS 	ob_qty
+                    , IFNULL(SUM(OB_AMT), 0) 	AS 	ob_amt
+                    , IFNULL(SUM(IN_AMT), 0) 	AS 	in_amt
+                    , NULL 	AS 	initial_j_amt   -- 초기값은 필요 없음
+                    FROM STSALETB
+                WHERE CUST_CD = #{paramCustCd }
+                AND LEFT(SALE_DAY, 6) = CONCAT(#{paramYear}, #{paramMonth})
+                GROUP BY SALE_DAY
+        ) a
+        ORDER BY a.SALE_DAY
+
+    </select>
+
+    <!-- 매출수금집계조회(년) 관리  -->
+    <select id="sal3120_list" resultType="java.util.HashMap">
+        SET @w_amt := 0;
+
+        SELECT
+              a.sale_day	            AS  saleDay
+            , IFNULL(a.o_qty, 0)        AS  oQty
+            , IFNULL(a.o_amt, 0)        AS  oAmt
+            , IFNULL(a.oj_qty, 0)       AS  ojQty
+            , IFNULL(a.oj_amt, 0)       AS  ojAmt
+            , IFNULL(a.ob_qty, 0)       AS  obQty
+            , IFNULL(a.ob_amt, 0)       AS  obAmt
+            , IFNULL(a.in_amt, 0)       AS  inAmt
+            , @w_amt := @w_amt
+                    + IFNULL(a.o_amt, 0)
+                    - IFNULL(a.ob_amt, 0)
+                    - IFNULL(a.in_amt, 0)       AS  jAmt
+            , ''                        AS  remarks
+        FROM (
+                -- 과거 데이터 집계
+                SELECT
+                      CONCAT(#{paramYear}, '00') AS  sale_day
+                    , 0                      	AS 	o_qty
+                    , 0                      	AS 	o_amt
+                    , 0                      	AS 	oj_qty
+                    , 0                      	AS 	oj_amt
+                    , 0                      	AS	ob_qty
+                    , 0                      	AS 	ob_amt
+                    , 0                      	AS 	in_amt
+                    , @w_amt := IFNULL(SUM(O_AMT), 0) - IFNULL(SUM(OB_AMT), 0) - IFNULL(SUM(IN_AMT), 0) 	AS 	initial_j_amt
+                FROM STSALETB
+                WHERE CUST_CD = #{paramCustCd }
+                AND LEFT(SALE_DAY, 4)   <![CDATA[<]]>    #{paramYear}
+
+            UNION ALL
+
+                -- 현재 월 데이터
+                SELECT
+                      LEFT(SALE_DAY, 6)         AS  sale_day
+                    , IFNULL(SUM(O_QTY), 0) 	AS 	o_qty
+                    , IFNULL(SUM(O_AMT), 0) 	AS 	o_amt
+                    , IFNULL(SUM(OJ_QTY), 0) 	AS 	oj_qty
+                    , IFNULL(SUM(OJ_AMT), 0) 	AS 	oj_amt
+                    , IFNULL(SUM(OB_QTY), 0) 	AS 	ob_qty
+                    , IFNULL(SUM(OB_AMT), 0) 	AS 	ob_amt
+                    , IFNULL(SUM(IN_AMT), 0) 	AS 	in_amt
+                    , NULL 	AS 	initial_j_amt   -- 초기값은 필요 없음
+                    FROM STSALETB
+                WHERE CUST_CD = #{paramCustCd }
+                AND LEFT(SALE_DAY, 4) = #{paramYear}
+                GROUP BY LEFT(SALE_DAY, 6)
+        ) a
+        ORDER BY a.sale_day
+
+    </select>
+
+    <!-- 입금전표현황  -->
+    <select id="sal3210_list" resultType="java.util.HashMap">
+        SELECT    ROW_NUMBER() OVER (ORDER BY ac.ACC_DAY) as rowNum
+                , ac.ACC_DAY	                	as  accDay
+                , ac.CUST_CD                        as  custCd
+                , mc.CUST_NM                        as  custNm
+                , (SELECT ((sum(ts.O_AMT) - sum(ts.OB_AMT)) - sum(ts.IN_AMT))
+                    FROM STSALETB ts WHERE ts.SALE_DAY <![CDATA[<=]]> ac.ACC_DAY AND ts.CUST_CD = ac.CUST_CD
+                    GROUP by ts.CUST_CD
+                  )                                 as 	wAmt
+                , ac.AMT			         		as  amt
+                , CASE  when  ac.ACC_FG = '1'  then  '현금'
+                        when  ac.ACC_FG = '2'  then  '어음'
+                        when  ac.ACC_FG = '3'  then  '은행'
+                        when  ac.ACC_FG = '4'  then  '카드'
+                        when  ac.ACC_FG = '5'  then  '공제'
+                        when  ac.ACC_FG = '9'  then  '기타'
+                        else                        '오류'
+                        END                   		as  accFgNm
+                , ac.REMARKS			      		as  remarks
+                , bl.END_DAY                        as  endDay
+                , bl.DIV_CD		             	    as  divCd
+                , c1.COMM_NM			            as  divCdNm
+                , bl.PUB_COMP		                as  pubComp
+                , bl.BILL_AMT		                as  billAmt
+
+        FROM SACCTB ac
+
+            -- 거래처코드
+            left outer join MCUSTTB as mc ON mc.CUST_CD  = ac.CUST_CD
+            -- 어음정보
+            left outer join SBILLTB as bl ON bl.ACC_DAY  = ac.ACC_DAY AND bl.SEQ = ac.SEQ
+            -- 공통코드(어음유형 1303)
+            left outer join MCOMMTB as c1 ON c1.COMM_CD = bl.DIV_CD
+
+        WHERE ac.ACC_DAY BETWEEN  #{paramPeriodFrom } AND #{paramPeriodTo }
+            <if test='paramAccFg != null and paramAccFg != ""'>
+                AND ac.ACC_FG = #{paramAccFg }
+            </if>
+            <if test='paramCustCd != null and paramCustCd != ""'>
+                AND ac.CUST_CD = #{paramCustCd }
+            </if>
+            <if test='paramValue != null and paramValue != ""'>
+                AND ( ac.CUST_CD LIKE CONCAT( '%', #{paramValue }, '%' )
+                OR  mc.CUST_NM LIKE CONCAT( '%', #{paramValue }, '%')
+                OR  ac.REMARKS LIKE CONCAT( '%', #{paramValue }, '%')
+                )
+            </if>
+        ORDER BY ac.ACC_DAY
+
+    </select>
+
+    <!-- 어음전표현황  -->
+    <select id="sal3220_list" resultType="java.util.HashMap">
+        SELECT
+              bi.BILL_NO            as  billNo
+            , bi.DIV_CD             as  divCd
+            , c1.COMM_NM  		    as 	divCdNm
+            , bi.PUB_COMP			as	pubComp
+            , bi.PUB_NM			    as	pubNm
+            , bi.PUB_Day			as	pubDay
+            , bi.REC_DAY			as	recDay
+            , bi.PAY_DAY			as	payDay
+            , bi.PAY_POINT		    as	payPoint
+            , bi.PAY_COMP			as	payComp
+            , bi.END_DAY			as	endDay
+            , bi.BILL_AMT			as	billAmt
+            , bi.YUL				as	yul
+            , bi.YUL_AMT			as	yulAmt
+            , bi.REMARKS			as	remarks
+            , bi.ACC_DAY			as	accDay
+            , bi.SEQ				as	seq
+        FROM SBILLTB bi
+            -- 어음유형 (공통코드 1303)
+            left outer join MCOMMTB as c1 ON c1.COMM_CD = bi.DIV_CD
+
+        WHERE 1=1
+          AND bi.BILL_AMT	!=	0
+            <if test='paramDivCd != null and paramDivCd != ""'>
+                AND  bi.DIV_CD = #{paramDivCd }
+            </if>
+            <if test='paramFg == "1"'>
+                AND bi.ACC_DAY BETWEEN #{paramPeriodFrom } AND #{paramPeriodTo }
+            </if>
+            <if test='paramFg == "2"'>
+                AND bi.END_DAY BETWEEN #{paramPeriodFrom } AND #{paramPeriodTo }
+            </if>
+            <if test='paramValue != null and paramValue != ""'>
+                AND ( bi.PUB_COMP LIKE CONCAT( '%', #{paramValue }, '%' )
+                OR  bi.PUB_NM LIKE CONCAT( '%', #{paramValue }, '%')
+                OR  bi.REMARKS LIKE CONCAT( '%', #{paramValue }, '%')
+                )
+            </if>
+        ORDER BY bi.ACC_DAY DESC
+    </select>
+
 </mapper>
