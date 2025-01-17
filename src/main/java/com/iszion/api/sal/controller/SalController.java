@@ -929,9 +929,8 @@ public class SalController {
     }
 
     /* *******************************************************************************
-     ** 도서별 입출고원장
+     ** 출고전표 집계현황
      ** ******************************************************************************* */
-
     @PostMapping("/sal2120_list")
     public String sal2120_list(HttpServletRequest request, @RequestHeader("Authorization") String token) throws IOException {
         Object result;
@@ -1710,5 +1709,213 @@ public class SalController {
         }
         return jsonDataRtn;
     }
+    /* *******************************************************************************
+     ** 도서별재고현황
+     ** ******************************************************************************* */
+    @PostMapping("/sal4110_list")
+    public String sal4110_list(HttpServletRequest request, @RequestHeader("Authorization") String token) throws IOException {
+        Object result;
+
+        String jsonDataRtn = "";
+        RequestUtil requestUtil = new RequestUtil();
+        JsonUtils jsonUtils = new JsonUtils();
+
+        String jsonData = requestUtil.getBody(request);
+
+        Map<String, Object> reqParam = new HashMap<String, Object>();
+        if (!jsonData.isEmpty()) {
+            reqParam = jsonUtils.jsonStringToMap(jsonData);
+        }
+        try {
+            result = salService.selectQryList("sal4110_list", reqParam);
+
+            Map<String, Object> jsonList = new HashMap<>();
+            jsonList.put("data", result);
+
+            jsonDataRtn = jsonUtils.getToJson(jsonList);
+            jsonDataRtn = jsonDataRtn.replaceAll("null", "\"\"");
+//            LOGGER.info("-------------------" + jsonDataRtn);
+
+        } catch (Exception e) {
+            LOGGER.info("Exception : " + e.getMessage());
+            e.printStackTrace();
+
+        }
+        return jsonDataRtn;
+    }
+    /* *******************************************************************************
+     ** 도서별적정재고현황
+     ** ******************************************************************************* */
+    @PostMapping("/sal4120_list")
+    public String sal4120_list(HttpServletRequest request, @RequestHeader("Authorization") String token) throws IOException {
+        Object result;
+
+        String jsonDataRtn = "";
+        RequestUtil requestUtil = new RequestUtil();
+        JsonUtils jsonUtils = new JsonUtils();
+
+        String jsonData = requestUtil.getBody(request);
+
+        Map<String, Object> reqParam = new HashMap<String, Object>();
+        if (!jsonData.isEmpty()) {
+            reqParam = jsonUtils.jsonStringToMap(jsonData);
+        }
+        try {
+            result = salService.selectQryList("sal4120_list", reqParam);
+
+            Map<String, Object> jsonList = new HashMap<>();
+            jsonList.put("data", result);
+
+            jsonDataRtn = jsonUtils.getToJson(jsonList);
+            jsonDataRtn = jsonDataRtn.replaceAll("null", "\"\"");
+//            LOGGER.info("-------------------" + jsonDataRtn);
+
+        } catch (Exception e) {
+            LOGGER.info("Exception : " + e.getMessage());
+            e.printStackTrace();
+
+        }
+        return jsonDataRtn;
+    }
+    /* *******************************************************************************
+     ** 입출재고조회(월)
+     ** ******************************************************************************* */
+    @PostMapping("/sal4210_list")
+    public String sal4210_list(HttpServletRequest request, @RequestHeader("Authorization") String token) throws IOException {
+        Object result;
+
+        String jsonDataRtn = "";
+        RequestUtil requestUtil = new RequestUtil();
+        JsonUtils jsonUtils = new JsonUtils();
+
+        String jsonData = requestUtil.getBody(request);
+
+        Map<String, Object> reqParam = new HashMap<String, Object>();
+        if (!jsonData.isEmpty()) {
+            reqParam = jsonUtils.jsonStringToMap(jsonData);
+        }
+        try {
+            result = salService.selectQryList("sal4210_list", reqParam);
+
+            Map<String, Object> jsonList = new HashMap<>();
+            jsonList.put("data", result);
+
+            jsonDataRtn = jsonUtils.getToJson(jsonList);
+            jsonDataRtn = jsonDataRtn.replaceAll("null", "\"\"");
+//            LOGGER.info("-------------------" + jsonDataRtn);
+
+        } catch (Exception e) {
+            LOGGER.info("Exception : " + e.getMessage());
+            e.printStackTrace();
+
+        }
+        return jsonDataRtn;
+    }
+    /* *******************************************************************************
+     ** 입출재고조회(년)
+     ** ******************************************************************************* */
+    @PostMapping("/sal4220_list")
+    public String sal4220_list(HttpServletRequest request, @RequestHeader("Authorization") String token) throws IOException {
+        Object result;
+
+        String jsonDataRtn = "";
+        RequestUtil requestUtil = new RequestUtil();
+        JsonUtils jsonUtils = new JsonUtils();
+
+        String jsonData = requestUtil.getBody(request);
+
+        Map<String, Object> reqParam = new HashMap<String, Object>();
+        if (!jsonData.isEmpty()) {
+            reqParam = jsonUtils.jsonStringToMap(jsonData);
+        }
+        try {
+            result = salService.selectQryList("sal4220_list", reqParam);
+
+            Map<String, Object> jsonList = new HashMap<>();
+            jsonList.put("data", result);
+
+            jsonDataRtn = jsonUtils.getToJson(jsonList);
+            jsonDataRtn = jsonDataRtn.replaceAll("null", "\"\"");
+//            LOGGER.info("-------------------" + jsonDataRtn);
+
+        } catch (Exception e) {
+            LOGGER.info("Exception : " + e.getMessage());
+            e.printStackTrace();
+
+        }
+        return jsonDataRtn;
+    }
+
+   /* *******************************************************************************
+     ** 거래처 거래원장
+     ** ******************************************************************************* */
+    @PostMapping("/sal4310_list")
+    public String sal4310_list(HttpServletRequest request, @RequestHeader("Authorization") String token) throws IOException {
+        Object result;
+
+        String jsonDataRtn = "";
+        RequestUtil requestUtil = new RequestUtil();
+        JsonUtils jsonUtils = new JsonUtils();
+
+        String jsonData = requestUtil.getBody(request);
+
+        Map<String, Object> reqParam = new HashMap<String, Object>();
+        if (!jsonData.isEmpty()) {
+            reqParam = jsonUtils.jsonStringToMap(jsonData);
+        }
+        try {
+            result = salService.selectQryList("sal4310_list", reqParam);
+
+            Map<String, Object> jsonList = new HashMap<>();
+            jsonList.put("data", result);
+
+            jsonDataRtn = jsonUtils.getToJson(jsonList);
+            jsonDataRtn = jsonDataRtn.replaceAll("null", "\"\"");
+//            LOGGER.info("-------------------" + jsonDataRtn);
+
+        } catch (Exception e) {
+            LOGGER.info("Exception : " + e.getMessage());
+            e.printStackTrace();
+
+        }
+        return jsonDataRtn;
+    }
+
+
+   /* *******************************************************************************
+     ** 도서별 입출고 원장
+     ** ******************************************************************************* */
+    @PostMapping("/sal4320_list")
+    public String sal4320_list(HttpServletRequest request, @RequestHeader("Authorization") String token) throws IOException {
+        Object result;
+
+        String jsonDataRtn = "";
+        RequestUtil requestUtil = new RequestUtil();
+        JsonUtils jsonUtils = new JsonUtils();
+
+        String jsonData = requestUtil.getBody(request);
+
+        Map<String, Object> reqParam = new HashMap<String, Object>();
+        if (!jsonData.isEmpty()) {
+            reqParam = jsonUtils.jsonStringToMap(jsonData);
+        }
+        try {
+            result = salService.selectQryList("sal4320_list", reqParam);
+
+            Map<String, Object> jsonList = new HashMap<>();
+            jsonList.put("data", result);
+
+            jsonDataRtn = jsonUtils.getToJson(jsonList);
+            jsonDataRtn = jsonDataRtn.replaceAll("null", "\"\"");
+//            LOGGER.info("-------------------" + jsonDataRtn);
+
+        } catch (Exception e) {
+            LOGGER.info("Exception : " + e.getMessage());
+            e.printStackTrace();
+
+        }
+        return jsonDataRtn;
+    }
+
 
 }
