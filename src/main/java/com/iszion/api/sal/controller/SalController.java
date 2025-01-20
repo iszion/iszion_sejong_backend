@@ -1882,7 +1882,7 @@ public class SalController {
     }
 
 
-   /* *******************************************************************************
+    /* *******************************************************************************
      ** 도서별 입출고 원장
      ** ******************************************************************************* */
     @PostMapping("/sal4320_list")
@@ -1901,6 +1901,329 @@ public class SalController {
         }
         try {
             result = salService.selectQryList("sal4320_list", reqParam);
+
+            Map<String, Object> jsonList = new HashMap<>();
+            jsonList.put("data", result);
+
+            jsonDataRtn = jsonUtils.getToJson(jsonList);
+            jsonDataRtn = jsonDataRtn.replaceAll("null", "\"\"");
+//            LOGGER.info("-------------------" + jsonDataRtn);
+
+        } catch (Exception e) {
+            LOGGER.info("Exception : " + e.getMessage());
+            e.printStackTrace();
+
+        }
+        return jsonDataRtn;
+    }
+
+    /* *******************************************************************************
+     ** 순출고누계현황
+     ** ******************************************************************************* */
+    @PostMapping("/sal4410_list")
+    public String sal4410_list(HttpServletRequest request, @RequestHeader("Authorization") String token) throws IOException {
+        Object result;
+
+        String jsonDataRtn = "";
+        RequestUtil requestUtil = new RequestUtil();
+        JsonUtils jsonUtils = new JsonUtils();
+
+        String jsonData = requestUtil.getBody(request);
+
+        Map<String, Object> reqParam = new HashMap<String, Object>();
+        if (!jsonData.isEmpty()) {
+            reqParam = jsonUtils.jsonStringToMap(jsonData);
+        }
+        try {
+            result = salService.selectQryList("sal4410_list", reqParam);
+
+            Map<String, Object> jsonList = new HashMap<>();
+            jsonList.put("data", result);
+
+            jsonDataRtn = jsonUtils.getToJson(jsonList);
+            jsonDataRtn = jsonDataRtn.replaceAll("null", "\"\"");
+//            LOGGER.info("-------------------" + jsonDataRtn);
+
+        } catch (Exception e) {
+            LOGGER.info("Exception : " + e.getMessage());
+            e.printStackTrace();
+
+        }
+        return jsonDataRtn;
+    }
+
+
+    /* *******************************************************************************
+     ** 연구원 판매집계표
+     ** ******************************************************************************* */
+    @PostMapping("/sal4420_list")
+    public String sal4420_list(HttpServletRequest request, @RequestHeader("Authorization") String token) throws IOException {
+        Object result;
+
+        String jsonDataRtn = "";
+        RequestUtil requestUtil = new RequestUtil();
+        JsonUtils jsonUtils = new JsonUtils();
+
+        String jsonData = requestUtil.getBody(request);
+
+        Map<String, Object> reqParam = new HashMap<String, Object>();
+        if (!jsonData.isEmpty()) {
+            reqParam = jsonUtils.jsonStringToMap(jsonData);
+        }
+        try {
+            result = salService.selectQryList("sal4420_list", reqParam);
+
+            Map<String, Object> jsonList = new HashMap<>();
+            jsonList.put("data", result);
+
+            jsonDataRtn = jsonUtils.getToJson(jsonList);
+            jsonDataRtn = jsonDataRtn.replaceAll("null", "\"\"");
+//            LOGGER.info("-------------------" + jsonDataRtn);
+
+        } catch (Exception e) {
+            LOGGER.info("Exception : " + e.getMessage());
+            e.printStackTrace();
+
+        }
+        return jsonDataRtn;
+    }
+
+
+    /* *******************************************************************************
+     ** 거래처잔액명세(월)
+     ** ******************************************************************************* */
+    @PostMapping("/sal4430_list")
+    public String sal4430_list(HttpServletRequest request, @RequestHeader("Authorization") String token) throws IOException {
+        Object result;
+
+        String jsonDataRtn = "";
+        RequestUtil requestUtil = new RequestUtil();
+        JsonUtils jsonUtils = new JsonUtils();
+
+        String jsonData = requestUtil.getBody(request);
+
+        Map<String, Object> reqParam = new HashMap<String, Object>();
+        if (!jsonData.isEmpty()) {
+            reqParam = jsonUtils.jsonStringToMap(jsonData);
+        }
+        try {
+            result = salService.selectQryList("sal4430_list", reqParam);
+
+            Map<String, Object> jsonList = new HashMap<>();
+            jsonList.put("data", result);
+
+            jsonDataRtn = jsonUtils.getToJson(jsonList);
+            jsonDataRtn = jsonDataRtn.replaceAll("null", "\"\"");
+//            LOGGER.info("-------------------" + jsonDataRtn);
+
+        } catch (Exception e) {
+            LOGGER.info("Exception : " + e.getMessage());
+            e.printStackTrace();
+
+        }
+        return jsonDataRtn;
+    }
+
+
+    /* *******************************************************************************
+     ** 거래처잔액명세(년)
+     ** ******************************************************************************* */
+    @PostMapping("/sal4440_list")
+    public String sal4440_list(HttpServletRequest request, @RequestHeader("Authorization") String token) throws IOException {
+        Object result;
+
+        String jsonDataRtn = "";
+        RequestUtil requestUtil = new RequestUtil();
+        JsonUtils jsonUtils = new JsonUtils();
+
+        String jsonData = requestUtil.getBody(request);
+
+        Map<String, Object> reqParam = new HashMap<String, Object>();
+        if (!jsonData.isEmpty()) {
+            reqParam = jsonUtils.jsonStringToMap(jsonData);
+        }
+        try {
+            result = salService.selectQryList("sal4440_list", reqParam);
+
+            Map<String, Object> jsonList = new HashMap<>();
+            jsonList.put("data", result);
+
+            jsonDataRtn = jsonUtils.getToJson(jsonList);
+            jsonDataRtn = jsonDataRtn.replaceAll("null", "\"\"");
+//            LOGGER.info("-------------------" + jsonDataRtn);
+
+        } catch (Exception e) {
+            LOGGER.info("Exception : " + e.getMessage());
+            e.printStackTrace();
+
+        }
+        return jsonDataRtn;
+    }
+
+
+    /* *******************************************************************************
+     ** 거래처판매현황
+     ** ******************************************************************************* */
+    @PostMapping("/sal4450_list")
+    public String sal4450_list(HttpServletRequest request, @RequestHeader("Authorization") String token) throws IOException {
+        Object result;
+
+        String jsonDataRtn = "";
+        RequestUtil requestUtil = new RequestUtil();
+        JsonUtils jsonUtils = new JsonUtils();
+
+        String jsonData = requestUtil.getBody(request);
+
+        Map<String, Object> reqParam = new HashMap<String, Object>();
+        if (!jsonData.isEmpty()) {
+            reqParam = jsonUtils.jsonStringToMap(jsonData);
+        }
+        try {
+            result = salService.selectQryList("sal4450_list", reqParam);
+
+            Map<String, Object> jsonList = new HashMap<>();
+            jsonList.put("data", result);
+
+            jsonDataRtn = jsonUtils.getToJson(jsonList);
+            jsonDataRtn = jsonDataRtn.replaceAll("null", "\"\"");
+//            LOGGER.info("-------------------" + jsonDataRtn);
+
+        } catch (Exception e) {
+            LOGGER.info("Exception : " + e.getMessage());
+            e.printStackTrace();
+
+        }
+        return jsonDataRtn;
+    }
+
+
+    /* *******************************************************************************
+     ** 년간도서출고명세
+     ** ******************************************************************************* */
+    @PostMapping("/sal4460_list")
+    public String sal4460_list(HttpServletRequest request, @RequestHeader("Authorization") String token) throws IOException {
+        Object result;
+
+        String jsonDataRtn = "";
+        RequestUtil requestUtil = new RequestUtil();
+        JsonUtils jsonUtils = new JsonUtils();
+
+        String jsonData = requestUtil.getBody(request);
+
+        Map<String, Object> reqParam = new HashMap<String, Object>();
+        if (!jsonData.isEmpty()) {
+            reqParam = jsonUtils.jsonStringToMap(jsonData);
+        }
+        try {
+            result = salService.selectQryList("sal4460_list", reqParam);
+
+            Map<String, Object> jsonList = new HashMap<>();
+            jsonList.put("data", result);
+
+            jsonDataRtn = jsonUtils.getToJson(jsonList);
+            jsonDataRtn = jsonDataRtn.replaceAll("null", "\"\"");
+//            LOGGER.info("-------------------" + jsonDataRtn);
+
+        } catch (Exception e) {
+            LOGGER.info("Exception : " + e.getMessage());
+            e.printStackTrace();
+
+        }
+        return jsonDataRtn;
+    }
+
+
+    /* *******************************************************************************
+     ** 년간거래처매출
+     ** ******************************************************************************* */
+    @PostMapping("/sal4470_list")
+    public String sal4470_list(HttpServletRequest request, @RequestHeader("Authorization") String token) throws IOException {
+        Object result;
+
+        String jsonDataRtn = "";
+        RequestUtil requestUtil = new RequestUtil();
+        JsonUtils jsonUtils = new JsonUtils();
+
+        String jsonData = requestUtil.getBody(request);
+
+        Map<String, Object> reqParam = new HashMap<String, Object>();
+        if (!jsonData.isEmpty()) {
+            reqParam = jsonUtils.jsonStringToMap(jsonData);
+        }
+        try {
+            result = salService.selectQryList("sal4470_list", reqParam);
+
+            Map<String, Object> jsonList = new HashMap<>();
+            jsonList.put("data", result);
+
+            jsonDataRtn = jsonUtils.getToJson(jsonList);
+            jsonDataRtn = jsonDataRtn.replaceAll("null", "\"\"");
+//            LOGGER.info("-------------------" + jsonDataRtn);
+
+        } catch (Exception e) {
+            LOGGER.info("Exception : " + e.getMessage());
+            e.printStackTrace();
+
+        }
+        return jsonDataRtn;
+    }
+
+
+    /* *******************************************************************************
+     ** 거래처도서출고명세(년)
+     ** ******************************************************************************* */
+    @PostMapping("/sal4480_list")
+    public String sal4480_list(HttpServletRequest request, @RequestHeader("Authorization") String token) throws IOException {
+        Object result;
+
+        String jsonDataRtn = "";
+        RequestUtil requestUtil = new RequestUtil();
+        JsonUtils jsonUtils = new JsonUtils();
+
+        String jsonData = requestUtil.getBody(request);
+
+        Map<String, Object> reqParam = new HashMap<String, Object>();
+        if (!jsonData.isEmpty()) {
+            reqParam = jsonUtils.jsonStringToMap(jsonData);
+        }
+        try {
+            result = salService.selectQryList("sal4480_list", reqParam);
+
+            Map<String, Object> jsonList = new HashMap<>();
+            jsonList.put("data", result);
+
+            jsonDataRtn = jsonUtils.getToJson(jsonList);
+            jsonDataRtn = jsonDataRtn.replaceAll("null", "\"\"");
+//            LOGGER.info("-------------------" + jsonDataRtn);
+
+        } catch (Exception e) {
+            LOGGER.info("Exception : " + e.getMessage());
+            e.printStackTrace();
+
+        }
+        return jsonDataRtn;
+    }
+
+
+    /* *******************************************************************************
+     ** 도서별거래처출고명세(년)
+     ** ******************************************************************************* */
+    @PostMapping("/sal4490_list")
+    public String sal4490_list(HttpServletRequest request, @RequestHeader("Authorization") String token) throws IOException {
+        Object result;
+
+        String jsonDataRtn = "";
+        RequestUtil requestUtil = new RequestUtil();
+        JsonUtils jsonUtils = new JsonUtils();
+
+        String jsonData = requestUtil.getBody(request);
+
+        Map<String, Object> reqParam = new HashMap<String, Object>();
+        if (!jsonData.isEmpty()) {
+            reqParam = jsonUtils.jsonStringToMap(jsonData);
+        }
+        try {
+            result = salService.selectQryList("sal4490_list", reqParam);
 
             Map<String, Object> jsonList = new HashMap<>();
             jsonList.put("data", result);

@@ -81,7 +81,7 @@
             , p.I_PRICE    as  iPrice
             , p.O_PRICE    as  oPrice
             , p.S_PRICE    as  sPrice
-            , p.PUB_DATE   as  pubDate
+            , p.PUB_DAY    as  pubDay
             , p.USE_YN     as  useYn
         FROM MPRODTB p
         WHERE 1=1
@@ -93,7 +93,7 @@
                     OR  p.PROD_CD LIKE CONCAT( '%', #{paramValueNm }, '%')
                     )
             </if>
-        ORDER BY p.PUB_DATE DESC
+        ORDER BY p.PUB_DAY DESC
 
     </select>
 
@@ -325,13 +325,13 @@
             )
         </if>
 
-        ORDER BY d.MAKE_DATE DESC
+        ORDER BY d.MAKE_DAY DESC
 
     </select>
 
     <select id="mst2010_list" resultType="java.util.HashMap">
         SELECT
-                  ROW_NUMBER() OVER (ORDER BY d.MAKE_DATE desc) as rowNum
+                  ROW_NUMBER() OVER (ORDER BY d.MAKE_DAY desc) as rowNum
                 , d.PROD_CD				as	prodCd
                 , d.PROD_DIV			as	prodDiv
                 , c1.COMM_NM			as	prodDivNm
@@ -360,8 +360,8 @@
                 , d.BUNDLE_PROD_CD		as	bundleProdCd
                 , d.MANAGER_NM			as	managerNm
                 , d.REMARKS				as	remarks
-                , d.MAKE_DATE			as	makeDate
-                , d.PUB_DATE			as	pubDate
+                , d.MAKE_DAY			as	makeDay
+                , d.PUB_DAY	    		as	pubDay
                 , d.REG_DATE			as	regDate
                 , d.REG_ID				as	regId
                 , d.UPDATE_DATE			as	updateDate
@@ -386,7 +386,7 @@
             LOWER(d.PROD_CD) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
             )
         </if>
-        ORDER BY d.MAKE_DATE DESC
+        ORDER BY d.MAKE_DAY DESC
         LIMIT #{paramPageRows} OFFSET #{paramStartRowNum }
     </select>
 
@@ -421,8 +421,8 @@
                 , d.BUNDLE_PROD_CD		as	bundleProdCd
                 , d.MANAGER_NM			as	managerNm
                 , d.REMARKS				as	remarks
-                , d.MAKE_DATE			as	makeDate
-                , d.PUB_DATE			as	pubDate
+                , d.MAKE_DAY			as	makeDay
+                , d.PUB_DAY	    		as	pubDay
                 , d.REG_DATE			as	regDate
                 , d.REG_ID				as	regId
                 , d.UPDATE_DATE			as	updateDate
@@ -475,8 +475,8 @@
                     , BUNDLE_PROD_CD
                     , MANAGER_NM
                     , REMARKS
-                    , MAKE_DATE
-                    , PUB_DATE
+                    , MAKE_DAY
+                    , PUB_DAY
                     , REG_DATE
                     , REG_ID
                     , UPDATE_DATE
@@ -507,8 +507,8 @@
                     , #{item.bundleProdCd }
                     , #{item.managerNm }
                     , #{item.remarks }
-                    , #{item.makeDate }
-                    , #{item.pubDate }
+                    , #{item.makeDay }
+                    , #{item.pubDay }
                     , now()
                     , #{userId}
                     , now()
@@ -546,8 +546,8 @@
                     , BUNDLE_PROD_CD =   #{item.bundleProdCd }
                     , MANAGER_NM	 =   #{item.managerNm }
                     , REMARKS        =   #{item.remarks }
-                    , MAKE_DATE      =   #{item.makeDate }
-                    , PUB_DATE       =   #{item.pubDate }
+                    , MAKE_DAY      =   #{item.makeDay }
+                    , PUB_DAY       =   #{item.pubDay }
                     , UPDATE_DATE    =   now()
                     , UPDATE_ID      =   #{userId }
 
@@ -582,13 +582,13 @@
             LOWER(a.CUST_CD) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
             )
         </if>
-        ORDER BY a.MAKE_DATE DESC
+        ORDER BY a.MAKE_DAY DESC
 
     </select>
 
     <select id="mst2020_list" resultType="java.util.HashMap">
         SELECT
-              ROW_NUMBER() OVER (ORDER BY a.MAKE_DATE desc) as rowNum
+              ROW_NUMBER() OVER (ORDER BY a.MAKE_DAY desc) as rowNum
             , a.CUST_CD			as	custCd
             , a.CUST_NM			as	custNm
             , a.DIV_CD			as	divCd
@@ -619,7 +619,7 @@
             , a.YUL_SG			as	yulSg
             , a.YUL_GT			as	yulGt
             , a.LIMIT_AMT		as	limitAmt
-            , a.MAKE_DATE		as	makeDate
+            , a.MAKE_DAY		as	makeDay
             , a.BILL_YN			as	billYn
             , a.BILL_EMAIL		as	billEmail
             , a.USE_YN			as	useYn
@@ -648,7 +648,7 @@
             LOWER(a.CUST_CD) LIKE CONCAT( '%', #{paramSearchValue }, '%' )
             )
         </if>
-        ORDER BY a.MAKE_DATE DESC
+        ORDER BY a.MAKE_DAY DESC
         LIMIT #{paramPageRows} OFFSET #{paramStartRowNum }
     </select>
 
@@ -685,7 +685,7 @@
              , a.YUL_SG			as	yulSg
              , a.YUL_GT			as	yulGt
              , a.LIMIT_AMT		as	limitAmt
-             , a.MAKE_DATE		as	makeDate
+             , a.MAKE_DAY		as	makeDay
              , a.BILL_YN		as	billYn
              , a.BILL_EMAIL		as	billEmail
              , a.USE_YN			as	useYn
@@ -746,7 +746,7 @@
                     , YUL_SG
                     , YUL_GT
                     , LIMIT_AMT
-                    , MAKE_DATE
+                    , MAKE_DAY
                     , BILL_YN
                     , BILL_EMAIL
                     , USE_YN
@@ -787,7 +787,7 @@
                     , #{item.yulSg }
                     , #{item.yulGt }
                     , #{item.limitAmt }
-                    , #{item.makeDate }
+                    , #{item.makeDay }
                     , #{item.billYn }
                     , #{item.billEmail }
                     , #{item.useYn }
@@ -835,7 +835,7 @@
                     ,  YUL_SG	        =   #{item.yulSg }
                     ,  YUL_GT	        =   #{item.yulGt }
                     ,  LIMIT_AMT	    =   #{item.limitAmt }
-                    ,  MAKE_DATE	    =   #{item.makeDate }
+                    ,  MAKE_DAY  	    =   #{item.makeDay }
                     ,  BILL_YN	        =   #{item.billYn }
                     ,  BILL_EMAIL       =   #{item.billEmail }
                     ,  USE_YN	        =   #{item.useYn }

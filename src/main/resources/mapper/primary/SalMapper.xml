@@ -2127,9 +2127,9 @@
                             UNION ALL
 
                         SELECT
-                                  left(ac.acc_date,6)   as  sale_ym
-                                , ac.acc_date           as  SALE_DAY
-                                , ac.seq_cnt    		as	SEQ
+                                  left(ac.ACC_DAY,6)    as  sale_ym
+                                , ac.ACC_DAY            as  SALE_DAY
+                                , ac.SEQ        		as	SEQ
                                 , '2'           		as  io_div
                                 , ''            		as  PROD_CD
                                 , case
@@ -2151,11 +2151,11 @@
                                 , 0             as  b_amt
                                 , 0             as  price
                                 , 0             as  yul
-                                , ac.acc_amt        as  income_amt
+                                , ac.AMT        as  income_amt
                                 , ac.REMARKS        as  REMARKS
-                            FROM db_sejong.SACCTB ac
+                            FROM SACCTB ac
                             WHERE ac.CUST_CD      =  #{paramCustCd }
-                              AND ac.acc_date  BETWEEN #{paramPeriodFrom } AND #{paramPeriodTo }
+                              AND ac.ACC_DAY   BETWEEN #{paramPeriodFrom } AND #{paramPeriodTo }
                     ) a, (select @rowNum := 0) x
                     ORDER BY a.SALE_DAY, a.io_div, a.SEQ;
 
@@ -2379,6 +2379,1122 @@
 
           and  !(b.sale_ym = '000000' and b.sale_day = '00000000' and b.cust_nm ='일계')
           and  !(b.sale_ym = '000000' and b.sale_day = '월계')
+    </select>
+
+
+    <!-- 순출고누계현황  -->
+    <select id="sal4410_list" resultType="java.util.HashMap">
+        drop TEMPORARY TABLE if exists TMP_WORK_TB;
+
+        CREATE TEMPORARY TABLE IF NOT EXISTS TMP_WORK_TB
+
+        SELECT    a.PROD_CD                                -- 코드
+                , ifnull(SUM(sAmt),0)       as  s_amt       -- 선인세누계
+                , ifnull(SUM(ITOT),0)       as  itot_qty    -- 총 재작누계(입고누계)
+                , ifnull(SUM(SQ),0)         as  stock_qty   -- 재고수량
+                , ifnull(SUM(M1),0)         as  m1_qty      -- 기준월 출고수량
+                , ifnull(SUM(M6),0)         as  m6_qty      -- 기준일 6개월 합
+                , ifnull(SUM(M12),0)        as  m12_qty     -- 기준일 12개월합
+                , ifnull(SUM(OTOT),0)       as  tot_qty     -- 총 출고수량
+            FROM (
+                    SELECT PROD_CD, 0                    as  sAmt, ifnull(sum(i_qty),0) as ITOT, 0                                            as M1, 0                                            as M6,  0                                           as M12, 0                                             as OTOT, 0                                                                  as SQ FROM SSTOCKTB WHERE STOCK_DAY BETWEEN #{paramPeriodFrom } and #{paramPeriodTo } group by PROD_CD
+                    union all
+                    SELECT PROD_CD, 0                    as  sAmt, 0                    as ITOT, 0                                            as M1, 0                                            as M6,  0                                           as M12, 0                                             as OTOT, ifnull(sum(i_qty),0) - ( ifnull(sum(o_qty),0) + ifnull(sum(oj_qty),0) + ifnull(sum(ox_qty),0) + ifnull(sum(oz_qty),0) ) + ifnull(sum(ob_qty),0)  as SQ FROM SSTOCKTB WHERE STOCK_DAY <![CDATA[<=]]> #{paramPeriodTo } group by PROD_CD
+                    union all
+                    SELECT PROD_CD, 0                    as  sAmt, 0                    as ITOT, ifnull(sum(o_qty),0) - ifnull(sum(ob_qty),0) as M1, 0                                            as M6,  0                                           as M12, 0                                             as OTOT, 0                                                                  as SQ FROM SSTOCKTB WHERE STOCK_DAY BETWEEN #{paramPeriodFrom } AND #{paramPeriodTo } group by PROD_CD
+                    union all
+                    SELECT PROD_CD, 0                    as  sAmt, 0                    as ITOT, 0                                            as M1, ifnull(sum(o_qty),0) - ifnull(sum(ob_qty),0) as M6,  0                                           as M12, 0                                             as OTOT, 0                                                                  as SQ FROM SSTOCKTB WHERE STOCK_DAY BETWEEN concat(#{paramStdDayM6 }, '01')       AND #{paramPeriodTo } group by PROD_CD
+                    union all
+                    SELECT PROD_CD, 0                    as  sAmt, 0                    as ITOT, 0                                            as M1, 0                                            as M6, ifnull(sum(o_qty),0) - ifnull(sum(ob_qty),0) as M12, 0                                             as OTOT, 0                                                                  as SQ FROM SSTOCKTB WHERE STOCK_DAY BETWEEN concat(#{paramStdDayM12 }, '01')      AND #{paramPeriodTo } group by PROD_CD
+                    union all
+                    SELECT PROD_CD, 0                    as  sAmt, 0                    as ITOT, 0                                            as M1, 0                                            as M6,  0                                           as M12, ifnull(sum(o_qty),0) - ifnull(sum(ob_qty),0)  as OTOT, 0                                                                  as SQ FROM SSTOCKTB WHERE STOCK_DAY <![CDATA[<=]]> #{paramPeriodTo } group by PROD_CD
+                    union all
+                    SELECT PROD_CD, sum(ifnull(s_amt,0)) as  sAmt, 0                    as ITOT, 0                                            as M1, 0                                            as M6,  0                                           as M12, 0                       as OTOT, 0                                                                  as SQ FROM SFEESTTB WHERE concat(proc_year, proc_month)  <![CDATA[<=]]>  left(#{paramPeriodTo },6) group by PROD_CD
+                ) a
+
+                    left outer join MPRODTB as mp ON mp.PROD_CD  = a.PROD_CD
+
+                WHERE a.PROD_CD != '0000'
+                     <if test='paramProdDiv != null and paramProdDiv != ""'>
+                       AND mp.PROD_DIV = #{paramProdDiv }
+                     </if>
+                GROUP BY a.PROD_CD
+                ORDER BY a.PROD_CD asc;
+
+
+        SELECT    t.PROD_CD             as  prodCd            -- 코드
+                , mp.PROD_NM            as  prodNm           -- 도서명
+                , sum(t.itot_qty)       as  itotQty          -- 총 재작누계(입고누계)
+                , sum(t.stock_qty)      as  stockQty         -- 재고수량
+                , sum(t.m1_qty)         as  m1Qty            -- 기준월 출고수량
+                , sum(t.m6_qty)         as  m6Qty            -- 기준일 6개월 합
+                , sum(t.m12_qty)        as  m12Qty           -- 기준일 12개월합
+                , sum(t.tot_qty)        as  totQty           -- 총 출고수량
+                , mp.pub_day            as  pubDay           -- 출간일
+                , mp.author_nm          as  authorNm         -- 저자
+                , mp.p1_page            as  p1Page           -- 쪽수
+                , mp.sun_nm             as  sunNm            -- 선서자
+                , sum(ROUND(t.s_amt/1000000 ,1)) as  sAmt   -- 선인세
+                , mp.s_price            as  sPrice          -- 정가
+                , mp.copyright_nm       as  copyrightNm     -- 저작권사
+                , mp.agent_cd           as  agentCd         -- 에이젠트코드
+                , ma.AGENT_NM           as  agentNm         -- 에이젠트
+                FROM TMP_WORK_TB t
+
+                    -- 도서코드
+                    left outer join MPRODTB as mp ON mp.PROD_CD  = t.PROD_CD
+                    -- 공통코드 (에이젠트 1202 )
+                    left outer join MAGENTTB as ma ON ma.AGENT_CD = mp.AGENT_CD
+
+        WHERE 1=1
+            <if test='paramValue != null and paramValue != ""'>
+                AND ( mp.PROD_NM LIKE CONCAT( '%', #{paramValue }, '%' )
+                    OR  t.PROD_CD LIKE CONCAT( '%', #{paramValue }, '%')
+                    OR  ma.AGENT_NM LIKE CONCAT( '%', #{paramValue }, '%')
+                    OR  mp.COPYRIGHT_NM LIKE CONCAT( '%', #{paramValue }, '%')
+                    OR  mp.SUN_NM LIKE CONCAT( '%', #{paramValue }, '%')
+                )
+            </if>
+
+        GROUP BY t.PROD_CD
+        -- WITH ROLLUP
+    </select>
+
+
+    <!-- 연구원판배집계표  -->
+    <select id="sal4420_list" resultType="java.util.HashMap">
+        SELECT
+              a.PROD_CD       as  prodCd                                      -- 도서코드
+            , mp.PROD_NM      as  prodNm                                     -- 도서명
+            , mp.S_PRICE      as  sPrice                                     -- 정가
+            , sum(a.wj_qty)   as  wjQty                                      -- 전월재고량
+            , sum(a.i_qty)    as  iQty                                       -- 당월입고
+            , sum(a.wj_qty) + sum(a.i_qty)  	as  tjQty                      -- 총재고
+            , sum(a.o_qty)  + sum(a.oj_qty) 	as  otQty                      -- 당월총출고수량
+            , sum(a.o_qty)    as  oQty                                       -- 당월출고수량
+            , sum(a.o_amt)    as  oAmt                                       -- 당월출고금액
+            , sum(a.ob_amt)   as  obAmt                                      -- 당월반품금액
+            , (sum(a.o_amt) - sum(a.ob_amt))  as  odAmt                      -- 실매출액(SB계산서발행)
+            , sum(a.ob_qty)   as  obQty                                      -- 당월 반품수량
+            , sum(a.oj_qty)   as  ojQty                                      -- 당월증정수량
+            , sum(a.o_qty) - sum(a.ob_qty)  	as odQty         							-- 순 출고수량
+            , sum(a.ox_qty)   as  oxQty                                      -- 당월폐기수량
+            , sum(a.oz_qty)   as  ozQty                                      -- 당월재고조정수량
+            ,(sum(a.wj_qty) +  sum(a.i_qty)) - (sum(a.o_qty) + sum(a.ox_qty) + sum(a.oz_qty)) +  sum(a.ob_qty) - sum(a.oj_qty) as  jQty   -- 당월재고수량
+            ,truncate((sum(a.o_qty) - sum(a.ob_qty)) * (mp.S_PRICE * 0.47),0) as  idAmt    -- 실매입금액(SB계산서수취)
+            ,truncate((sum(a.o_amt) - sum(a.ob_amt)) - ((sum(a.o_qty) - sum(a.ob_qty)) * mp.S_PRICE * 0.47),0)  as  jdAmt  -- 당월미수금(미지급금)
+        FROM  (
+                SELECT    PROD_CD
+                        , ifnull(sum(i_qty),0) - ( ifnull(sum(o_qty),0)+ifnull(sum(oj_qty),0)+ifnull(sum(ox_qty),0)+ifnull(sum(oz_qty),0) ) + ifnull(sum(ob_qty),0) as wj_qty    -- 전월재고
+                        , 0  as  i_qty                                                                                              -- 당월 입고수량
+                        , 0  as  o_qty                                                                                              -- 당월 출고수량
+                        , 0  as  ob_qty                                                                                             -- 당월 반품수량
+                        , 0  as  oj_qty                                                                                             -- 당월 증정수량
+                        , 0  as  ox_qty                                                                                             -- 당월 폐기수량
+                        , 0  as  oz_qty                                                                                             -- 당월 조정수량
+                        , 0  as  o_amt                                                                                              -- 당월 출고금액
+                        , 0  as  ob_amt                                                                                             -- 당월 반품금액
+                    FROM SSTOCKTB
+                    WHERE left(STOCK_DAY, 6)  <![CDATA[<]]>  CONCAT(#{paramYear} , #{paramMonth}) AND NOT(i_qty=0 AND ib_qty=0 AND o_qty=0 AND oj_qty=0 AND ox_qty=0 AND oz_qty=0 AND ob_qty=0)
+                    GROUP BY PROD_CD
+
+                UNION ALL
+
+                SELECT    PROD_CD
+                        , 0                     as  wj_qty
+                        , ifnull(sum(i_qty),0)  as  i_qty
+                        , ifnull(sum(o_qty),0)  as  o_qty
+                        , ifnull(sum(ob_qty),0) as  ob_qty
+                        , ifnull(sum(oj_qty),0) as  oj_qty
+                        , ifnull(sum(ox_qty),0) as  ox_qty
+                        , ifnull(sum(oz_qty),0) as  oz_qty
+                        , ifnull(sum(o_amt),0)  as  o_amt
+                        , ifnull(sum(ob_amt),0) as  ob_amt
+                    FROM  SSTOCKTB
+                    WHERE left(STOCK_DAY,6) = CONCAT(#{paramYear} , #{paramMonth}) AND NOT(i_qty=0 AND ib_qty=0 AND o_qty=0 AND oj_qty=0 AND ox_qty=0 AND oz_qty=0 AND ob_qty=0)
+                    GROUP BY PROD_CD
+            ) a
+
+                left outer join MPRODTB as mp ON mp.PROD_CD = a.PROD_CD
+
+            WHERE 1=1
+
+            <if test='paramProdDiv != null and paramprodDiv != ""'>
+                AND mp.PROD_DIV = #{paramProdDiv }
+            </if>
+
+            <if test='paramValue != null and paramValue != ""'>
+                AND ( mp.PROD_NM LIKE CONCAT( '%', #{paramValue }, '%' )
+                    OR  a.PROD_CD LIKE CONCAT( '%', #{paramValue }, '%')
+                )
+            </if>
+
+        GROUP BY a.PROD_CD;
+    </select>
+
+
+    <!-- 거래처별 잔액명세서(월) -->
+    <select id="sal4430_list" resultType="java.util.HashMap">
+        SELECT    b.cust_cd                                  as  custCd
+                , mc.CUST_NM                                 as  custNm
+                , b.w_amt                                    as  wAmt
+                , b.o_amt                                    as  oAmt
+                , b.o_qty                                    as  oQty
+                , b.ob_amt                                   as  obAmt
+                , b.ob_qty                                   as  obQty
+                , b.oj_qty                                   as  ojQty
+                , b.in_amt                                   as  inAmt
+                , b.w_amt + b.o_amt - b.ob_amt - b.in_amt    as  jAmt
+            FROM (
+                    SELECT    a.cust_cd                                  as  cust_cd
+                            , ifnull(sum(a.w_amt),0)                     as  w_amt
+                            , ifnull(sum(a.o_amt),0)                     as  o_amt
+                            , ifnull(sum(a.o_qty),0)                     as  o_qty
+                            , ifnull(sum(a.ob_amt),0)                    as  ob_amt
+                            , ifnull(sum(a.ob_qty),0)                    as  ob_qty
+                            , ifnull(sum(a.oj_qty),0)                    as  oj_qty
+                            , ifnull(sum(a.in_amt),0)                    as  in_amt
+                        FROM (
+                    SELECT    cust_cd
+                            , (ifnull(sum(O_AMT),0) - ifnull(sum(OB_AMT),0) - ifnull(sum(IN_AMT),0)) as w_amt
+                            , 0                                              as  o_amt
+                            , 0                                              as  o_qty
+                            , 0                                              as  ob_amt
+                            , 0                                              as  ob_qty
+                            , 0                                              as  oj_qty
+                            , 0                                              as  in_amt
+                        FROM STSALETB WHERE left(SALE_DAY, 6)  <![CDATA[<]]>    CONCAT(#{paramYear}, #{paramMonth})
+                        GROUP by cust_cd
+                UNION ALL
+                    SELECT    cust_cd
+                            , 0                                        as w_amt
+                            , ifnull(sum(O_AMT),0)                     as o_amt
+                            , ifnull(sum(O_QTY),0)                     as o_qty
+                            , ifnull(sum(OB_AMT),0)                    as ob_amt
+                            , ifnull(sum(OB_QTY),0)                    as ob_qty
+                            , ifnull(sum(OJ_QTY),0)                    as oj_qty
+                            , ifnull(sum(IN_AMT),0)                    as in_amt
+                        FROM STSALETB WHERE left(SALE_DAY, 6) = CONCAT(#{paramYear}, #{paramMonth})
+                        GROUP by cust_cd
+                ) a
+            WHERE 1=1
+              AND !(ifnull(a.w_amt,0) = 0 AND ifnull(a.o_amt,0) = 0 AND ifnull(a.ob_amt,0) = 0 AND ifnull(a.in_amt,0) = 0)
+            GROUP BY a.CUST_CD
+
+        ) b
+            left outer join MCUSTTB as mc ON mc.CUST_CD  = b.CUST_CD
+
+        WHERE 1=1
+          AND mc.CUST_NM    != ''
+            <if test='paramValue != null and paramValue != ""'>
+                AND ( mc.CUST_NM LIKE CONCAT( '%', #{paramValue }, '%' )
+                OR  b.cust_cd LIKE CONCAT( '%', #{paramValue }, '%')
+                )
+            </if>
+        ORDER BY b.cust_cd
+
+    </select>
+
+
+    <!-- 거래처별 잔액명세서(년) -->
+    <select id="sal4440_list" resultType="java.util.HashMap">
+        SELECT
+               b.cust_cd                   as  custCd
+             , mc.CUST_NM                  as  custNm
+
+             , ifnull(sum(w_amt),0)        as  wAmt
+
+             , ifnull(sum(b.o_01_qty),0)  as m01OQty
+             , ifnull(sum(b.o_02_qty),0)  as m02OQty
+             , ifnull(sum(b.o_03_qty),0)  as m03OQty
+             , ifnull(sum(b.o_04_qty),0)  as m04OQty
+             , ifnull(sum(b.o_05_qty),0)  as m05OQty
+             , ifnull(sum(b.o_06_qty),0)  as m06OQty
+             , ifnull(sum(b.o_07_qty),0)  as m07OQty
+             , ifnull(sum(b.o_08_qty),0)  as m08OQty
+             , ifnull(sum(b.o_09_qty),0)  as m09OQty
+             , ifnull(sum(b.o_10_qty),0)  as m10OQty
+             , ifnull(sum(b.o_11_qty),0)  as m11OQty
+             , ifnull(sum(b.o_12_qty),0)  as m12OQty
+
+             , ifnull(sum(b.o_01_amt),0)  as m01OAmt
+             , ifnull(sum(b.o_02_amt),0)  as m02OAmt
+             , ifnull(sum(b.o_03_amt),0)  as m03OAmt
+             , ifnull(sum(b.o_04_amt),0)  as m04OAmt
+             , ifnull(sum(b.o_05_amt),0)  as m05OAmt
+             , ifnull(sum(b.o_06_amt),0)  as m06OAmt
+             , ifnull(sum(b.o_07_amt),0)  as m07OAmt
+             , ifnull(sum(b.o_08_amt),0)  as m08OAmt
+             , ifnull(sum(b.o_09_amt),0)  as m09OAmt
+             , ifnull(sum(b.o_10_amt),0)  as m10OAmt
+             , ifnull(sum(b.o_11_amt),0)  as m11OAmt
+             , ifnull(sum(b.o_12_amt),0)  as m12OAmt
+
+             , ifnull(sum(b.ob_01_qty),0)  as m01ObQty
+             , ifnull(sum(b.ob_02_qty),0)  as m02ObQty
+             , ifnull(sum(b.ob_03_qty),0)  as m03ObQty
+             , ifnull(sum(b.ob_04_qty),0)  as m04ObQty
+             , ifnull(sum(b.ob_05_qty),0)  as m05ObQty
+             , ifnull(sum(b.ob_06_qty),0)  as m06ObQty
+             , ifnull(sum(b.ob_07_qty),0)  as m07ObQty
+             , ifnull(sum(b.ob_08_qty),0)  as m08ObQty
+             , ifnull(sum(b.ob_09_qty),0)  as m09ObQty
+             , ifnull(sum(b.ob_10_qty),0)  as m10ObQty
+             , ifnull(sum(b.ob_11_qty),0)  as m11ObQty
+             , ifnull(sum(b.ob_12_qty),0)  as m12ObQty
+
+             , ifnull(sum(b.ob_01_amt),0)  as m01ObAmt
+             , ifnull(sum(b.ob_02_amt),0)  as m02ObAmt
+             , ifnull(sum(b.ob_03_amt),0)  as m03ObAmt
+             , ifnull(sum(b.ob_04_amt),0)  as m04ObAmt
+             , ifnull(sum(b.ob_05_amt),0)  as m05ObAmt
+             , ifnull(sum(b.ob_06_amt),0)  as m06ObAmt
+             , ifnull(sum(b.ob_07_amt),0)  as m07ObAmt
+             , ifnull(sum(b.ob_08_amt),0)  as m08ObAmt
+             , ifnull(sum(b.ob_09_amt),0)  as m09ObAmt
+             , ifnull(sum(b.ob_10_amt),0)  as m10ObAmt
+             , ifnull(sum(b.ob_11_amt),0)  as m11ObAmt
+             , ifnull(sum(b.ob_12_amt),0)  as m12ObAmt
+
+             , ifnull(sum(b.in_01_amt),0)  as m01InAmt
+             , ifnull(sum(b.in_02_amt),0)  as m02InAmt
+             , ifnull(sum(b.in_03_amt),0)  as m03InAmt
+             , ifnull(sum(b.in_04_amt),0)  as m04InAmt
+             , ifnull(sum(b.in_05_amt),0)  as m05InAmt
+             , ifnull(sum(b.in_06_amt),0)  as m06InAmt
+             , ifnull(sum(b.in_07_amt),0)  as m07InAmt
+             , ifnull(sum(b.in_08_amt),0)  as m08InAmt
+             , ifnull(sum(b.in_09_amt),0)  as m09InAmt
+             , ifnull(sum(b.in_10_amt),0)  as m10InAmt
+             , ifnull(sum(b.in_11_amt),0)  as m11InAmt
+             , ifnull(sum(b.in_12_amt),0)  as m12InAmt
+
+             , @to_amt  := ifnull(sum(b.o_01_amt),0)  + ifnull(sum(b.o_02_amt),0)  + ifnull(sum(b.o_03_amt),0)  + ifnull(sum(b.o_04_amt),0)  + ifnull(sum(b.o_05_amt),0)  + ifnull(sum(b.o_06_amt),0)  + ifnull(sum(b.o_07_amt),0)  + ifnull(sum(b.o_08_amt),0)  + ifnull(sum(b.o_09_amt),0)  + ifnull(sum(b.o_10_amt),0)  + ifnull(sum(b.o_11_amt),0)  + ifnull(sum(b.o_12_amt),0)   as  toAmt
+             , @tob_amt := ifnull(sum(b.ob_01_amt),0) + ifnull(sum(b.ob_02_amt),0) + ifnull(sum(b.ob_03_amt),0) + ifnull(sum(b.ob_04_amt),0) + ifnull(sum(b.ob_05_amt),0) + ifnull(sum(b.ob_06_amt),0) + ifnull(sum(b.ob_07_amt),0) + ifnull(sum(b.ob_08_amt),0) + ifnull(sum(b.ob_09_amt),0) + ifnull(sum(b.ob_10_amt),0) + ifnull(sum(b.ob_11_amt),0) + ifnull(sum(b.ob_12_amt),0)  as  tobAmt
+             , @tin_amt := ifnull(sum(b.in_01_amt),0) + ifnull(sum(b.in_02_amt),0) + ifnull(sum(b.in_03_amt),0) + ifnull(sum(b.in_04_amt),0) + ifnull(sum(b.in_05_amt),0) + ifnull(sum(b.in_06_amt),0) + ifnull(sum(b.in_07_amt),0) + ifnull(sum(b.in_08_amt),0) + ifnull(sum(b.in_09_amt),0) + ifnull(sum(b.in_10_amt),0) + ifnull(sum(b.in_11_amt),0) + ifnull(sum(b.in_12_amt),0)  as  tinAmt
+
+             , ifnull(sum(w_amt),0)
+                + (ifnull(sum(b.o_01_amt),0)  + ifnull(sum(b.o_02_amt),0)  + ifnull(sum(b.o_03_amt),0)  + ifnull(sum(b.o_04_amt),0)  + ifnull(sum(b.o_05_amt),0)  + ifnull(sum(b.o_06_amt),0)  + ifnull(sum(b.o_07_amt),0)  + ifnull(sum(b.o_08_amt),0)  + ifnull(sum(b.o_09_amt),0)  + ifnull(sum(b.o_10_amt),0)  + ifnull(sum(b.o_11_amt),0)  + ifnull(sum(b.o_12_amt),0))
+                - (ifnull(sum(b.ob_01_amt),0) + ifnull(sum(b.ob_02_amt),0) + ifnull(sum(b.ob_03_amt),0) + ifnull(sum(b.ob_04_amt),0) + ifnull(sum(b.ob_05_amt),0) + ifnull(sum(b.ob_06_amt),0) + ifnull(sum(b.ob_07_amt),0) + ifnull(sum(b.ob_08_amt),0) + ifnull(sum(b.ob_09_amt),0) + ifnull(sum(b.ob_10_amt),0) + ifnull(sum(b.ob_11_amt),0) + ifnull(sum(b.ob_12_amt),0))
+                - (ifnull(sum(b.in_01_amt),0) + ifnull(sum(b.in_02_amt),0) + ifnull(sum(b.in_03_amt),0) + ifnull(sum(b.in_04_amt),0) + ifnull(sum(b.in_05_amt),0) + ifnull(sum(b.in_06_amt),0) + ifnull(sum(b.in_07_amt),0) + ifnull(sum(b.in_08_amt),0) + ifnull(sum(b.in_09_amt),0) + ifnull(sum(b.in_10_amt),0) + ifnull(sum(b.in_11_amt),0) + ifnull(sum(b.in_12_amt),0))
+                              as  jAmt
+
+        FROM (
+            SELECT cust_cd
+                , (ifnull(sum(O_AMT),0) - ifnull(sum(ob_AMT),0) - ifnull(sum(IN_AMT),0)) as w_amt
+
+                , 0              AS  o_01_qty
+                , 0              AS  o_02_qty
+                , 0              AS  o_03_qty
+                , 0              AS  o_04_qty
+                , 0              AS  o_05_qty
+                , 0              AS  o_06_qty
+                , 0              AS  o_07_qty
+                , 0              AS  o_08_qty
+                , 0              AS  o_09_qty
+                , 0              AS  o_10_qty
+                , 0              AS  o_11_qty
+                , 0              AS  o_12_qty
+
+                , 0              AS  o_01_amt
+                , 0              AS  o_02_amt
+                , 0              AS  o_03_amt
+                , 0              AS  o_04_amt
+                , 0              AS  o_05_amt
+                , 0              AS  o_06_amt
+                , 0              AS  o_07_amt
+                , 0              AS  o_08_amt
+                , 0              AS  o_09_amt
+                , 0              AS  o_10_amt
+                , 0              AS  o_11_amt
+                , 0              AS  o_12_amt
+
+                , 0              AS  ob_01_qty
+                , 0              AS  ob_02_qty
+                , 0              AS  ob_03_qty
+                , 0              AS  ob_04_qty
+                , 0              AS  ob_05_qty
+                , 0              AS  ob_06_qty
+                , 0              AS  ob_07_qty
+                , 0              AS  ob_08_qty
+                , 0              AS  ob_09_qty
+                , 0              AS  ob_10_qty
+                , 0              AS  ob_11_qty
+                , 0              AS  ob_12_qty
+
+                , 0              AS  ob_01_amt
+                , 0              AS  ob_02_amt
+                , 0              AS  ob_03_amt
+                , 0              AS  ob_04_amt
+                , 0              AS  ob_05_amt
+                , 0              AS  ob_06_amt
+                , 0              AS  ob_07_amt
+                , 0              AS  ob_08_amt
+                , 0              AS  ob_09_amt
+                , 0              AS  ob_10_amt
+                , 0              AS  ob_11_amt
+                , 0              AS  ob_12_amt
+
+                , 0              AS  in_01_amt
+                , 0              AS  in_02_amt
+                , 0              AS  in_03_amt
+                , 0              AS  in_04_amt
+                , 0              AS  in_05_amt
+                , 0              AS  in_06_amt
+                , 0              AS  in_07_amt
+                , 0              AS  in_08_amt
+                , 0              AS  in_09_amt
+                , 0              AS  in_10_amt
+                , 0              AS  in_11_amt
+                , 0              AS  in_12_amt
+
+            FROM STSALETB WHERE left(SALE_DAY, 4)  <![CDATA[<]]> #{paramYear }
+            GROUP by cust_cd
+
+            UNION ALL
+
+            SELECT
+                cust_cd
+                , 0                                                                      AS  w_amt
+                , CASE WHEN substring(SALE_DAY, 5,2) = '01' THEN o_qty END              AS  o_01_qty
+                , CASE WHEN substring(SALE_DAY, 5,2) = '02' THEN o_qty END              AS  o_02_qty
+                , CASE WHEN substring(SALE_DAY, 5,2) = '03' THEN o_qty END              AS  o_03_qty
+                , CASE WHEN substring(SALE_DAY, 5,2) = '04' THEN o_qty END              AS  o_04_qty
+                , CASE WHEN substring(SALE_DAY, 5,2) = '05' THEN o_qty END              AS  o_05_qty
+                , CASE WHEN substring(SALE_DAY, 5,2) = '06' THEN o_qty END              AS  o_06_qty
+                , CASE WHEN substring(SALE_DAY, 5,2) = '07' THEN o_qty END              AS  o_07_qty
+                , CASE WHEN substring(SALE_DAY, 5,2) = '08' THEN o_qty END              AS  o_08_qty
+                , CASE WHEN substring(SALE_DAY, 5,2) = '09' THEN o_qty END              AS  o_09_qty
+                , CASE WHEN substring(SALE_DAY, 5,2) = '10' THEN o_qty END              AS  o_10_qty
+                , CASE WHEN substring(SALE_DAY, 5,2) = '11' THEN o_qty END              AS  o_11_qty
+                , CASE WHEN substring(SALE_DAY, 5,2) = '12' THEN o_qty END              AS  o_12_qty
+
+                , CASE WHEN substring(SALE_DAY, 5,2) = '01' THEN o_amt END              AS  o_01_amt
+                , CASE WHEN substring(SALE_DAY, 5,2) = '02' THEN o_amt END              AS  o_02_amt
+                , CASE WHEN substring(SALE_DAY, 5,2) = '03' THEN o_amt END              AS  o_03_amt
+                , CASE WHEN substring(SALE_DAY, 5,2) = '04' THEN o_amt END              AS  o_04_amt
+                , CASE WHEN substring(SALE_DAY, 5,2) = '05' THEN o_amt END              AS  o_05_amt
+                , CASE WHEN substring(SALE_DAY, 5,2) = '06' THEN o_amt END              AS  o_06_amt
+                , CASE WHEN substring(SALE_DAY, 5,2) = '07' THEN o_amt END              AS  o_07_amt
+                , CASE WHEN substring(SALE_DAY, 5,2) = '08' THEN o_amt END              AS  o_08_amt
+                , CASE WHEN substring(SALE_DAY, 5,2) = '09' THEN o_amt END              AS  o_09_amt
+                , CASE WHEN substring(SALE_DAY, 5,2) = '10' THEN o_amt END              AS  o_10_amt
+                , CASE WHEN substring(SALE_DAY, 5,2) = '11' THEN o_amt END              AS  o_11_amt
+                , CASE WHEN substring(SALE_DAY, 5,2) = '12' THEN o_amt END              AS  o_12_amt
+
+                , CASE WHEN substring(SALE_DAY, 5,2) = '01' THEN ob_qty END             AS  ob_01_qty
+                , CASE WHEN substring(SALE_DAY, 5,2) = '02' THEN ob_qty END             AS  ob_02_qty
+                , CASE WHEN substring(SALE_DAY, 5,2) = '03' THEN ob_qty END             AS  ob_03_qty
+                , CASE WHEN substring(SALE_DAY, 5,2) = '04' THEN ob_qty END             AS  ob_04_qty
+                , CASE WHEN substring(SALE_DAY, 5,2) = '05' THEN ob_qty END             AS  ob_05_qty
+                , CASE WHEN substring(SALE_DAY, 5,2) = '06' THEN ob_qty END             AS  ob_06_qty
+                , CASE WHEN substring(SALE_DAY, 5,2) = '07' THEN ob_qty END             AS  ob_07_qty
+                , CASE WHEN substring(SALE_DAY, 5,2) = '08' THEN ob_qty END             AS  ob_08_qty
+                , CASE WHEN substring(SALE_DAY, 5,2) = '09' THEN ob_qty END             AS  ob_09_qty
+                , CASE WHEN substring(SALE_DAY, 5,2) = '10' THEN ob_qty END             AS  ob_10_qty
+                , CASE WHEN substring(SALE_DAY, 5,2) = '11' THEN ob_qty END             AS  ob_11_qty
+                , CASE WHEN substring(SALE_DAY, 5,2) = '12' THEN ob_qty END             AS  ob_12_qty
+
+                , CASE WHEN substring(sale_DAY, 5,2) = '01' THEN ob_amt END             AS  ob_01_amt
+                , CASE WHEN substring(sale_DAY, 5,2) = '02' THEN ob_amt END             AS  ob_02_amt
+                , CASE WHEN substring(sale_DAY, 5,2) = '03' THEN ob_amt END             AS  ob_03_amt
+                , CASE WHEN substring(sale_DAY, 5,2) = '04' THEN ob_amt END             AS  ob_04_amt
+                , CASE WHEN substring(sale_DAY, 5,2) = '05' THEN ob_amt END             AS  ob_05_amt
+                , CASE WHEN substring(sale_DAY, 5,2) = '06' THEN ob_amt END             AS  ob_06_amt
+                , CASE WHEN substring(sale_DAY, 5,2) = '07' THEN ob_amt END             AS  ob_07_amt
+                , CASE WHEN substring(sale_DAY, 5,2) = '08' THEN ob_amt END             AS  ob_08_amt
+                , CASE WHEN substring(sale_DAY, 5,2) = '09' THEN ob_amt END             AS  ob_09_amt
+                , CASE WHEN substring(sale_DAY, 5,2) = '10' THEN ob_amt END             AS  ob_10_amt
+                , CASE WHEN substring(sale_DAY, 5,2) = '11' THEN ob_amt END             AS  ob_11_amt
+                , CASE WHEN substring(sale_DAY, 5,2) = '12' THEN ob_amt END             AS  ob_12_amt
+
+                , CASE WHEN substring(SALE_DAY, 5,2) = '01' THEN in_amt END             AS  in_01_amt
+                , CASE WHEN substring(SALE_DAY, 5,2) = '02' THEN in_amt END             AS  in_02_amt
+                , CASE WHEN substring(SALE_DAY, 5,2) = '03' THEN in_amt END             AS  in_03_amt
+                , CASE WHEN substring(SALE_DAY, 5,2) = '04' THEN in_amt END             AS  in_04_amt
+                , CASE WHEN substring(SALE_DAY, 5,2) = '05' THEN in_amt END             AS  in_05_amt
+                , CASE WHEN substring(SALE_DAY, 5,2) = '06' THEN in_amt END             AS  in_06_amt
+                , CASE WHEN substring(SALE_DAY, 5,2) = '07' THEN in_amt END             AS  in_07_amt
+                , CASE WHEN substring(SALE_DAY, 5,2) = '08' THEN in_amt END             AS  in_08_amt
+                , CASE WHEN substring(SALE_DAY, 5,2) = '09' THEN in_amt END             AS  in_09_amt
+                , CASE WHEN substring(SALE_DAY, 5,2) = '10' THEN in_amt END             AS  in_10_amt
+                , CASE WHEN substring(SALE_DAY, 5,2) = '11' THEN in_amt END             AS  in_11_amt
+                , CASE WHEN substring(SALE_DAY, 5,2) = '12' THEN in_amt END             AS  in_12_amt
+
+            FROM  STSALETB as a
+            WHERE left(SALE_DAY,4) = #{paramYear }
+            ) b
+
+            left outer join MCUSTTB as mc ON mc.CUST_CD = b.cust_cd
+
+        WHERE 1=1
+          AND mc.CUST_NM != ''
+            <if test='paramValue != null and paramValue != ""'>
+                AND ( mc.CUST_NM LIKE CONCAT( '%', #{paramValue }, '%' )
+                OR  b.cust_cd LIKE CONCAT( '%', #{paramValue }, '%')
+                )
+            </if>
+        GROUP BY b.cust_cd
+
+    </select>
+
+    <!-- 거래처 판매현황 -->
+    <select id="sal4450_list" resultType="java.util.HashMap">
+        SELECT
+               b.cust_cd                       as  custCd   -- 거래처코드
+             , mc.CUST_NM                      as  custNm   -- 거래처명
+             , b.o_qty                         as  oQty     -- 출고수량
+             , b.o_amt                         as  oAmt     -- 출고금액
+             , b.j_qty                         as  jQty     -- 증정수량
+             , b.b_qty                         as  bQty     -- 반품수량
+             , b.b_amt                         as  bAmt     -- 반품금액
+             , b.o_amt - b.b_amt               as  sAmt     -- 매출금액
+             , b.in_amt                        as  inAmt    -- 수금액
+        FROM (
+                 SELECT
+                        a.cust_cd                       as  cust_cd   -- 거래처코드
+                      , sum(a.o_qty)                    as  o_qty     -- 출고수량
+                      , sum(a.o_amt)                    as  o_amt     -- 출고금액
+                      , sum(a.j_qty)                    as  j_qty     -- 증정수량
+                      , sum(a.b_qty)                    as  b_qty     -- 반품수량
+                      , sum(a.b_amt)                    as  b_amt     -- 반품금액
+                      , sum(a.in_amt)                   as  in_amt    -- 수금액
+                 FROM (
+                          SELECT cust_cd                                              -- 거래처코드
+                               , if(ifnull(div_cd, '0') = '1', if(ifnull(DEAL_FG,'0000000') != '4021205', QTY, 0), 0) as o_qty        -- 출고수량
+                               , if(ifnull(div_cd, '0') = '1', if(ifnull(DEAL_FG,'0000000') != '4021205', AMT, 0), 0) as o_amt        -- 출고금액
+                               , if(ifnull(div_cd, '0') = '9',                                           QTY, 0) as b_qty        -- 반품수량
+                               , if(ifnull(div_cd, '0') = '9',                                           AMT, 0) as b_amt        -- 반품금액
+                               , if(ifnull(div_cd, '0') = '1', if(ifnull(DEAL_FG,'0000000') = '4021205',  QTY, 0), 0) as j_qty        -- 증정
+                               , 0                                                                                     as in_amt
+
+                          FROM SDEALDTB
+                          WHERE DEAL_DAY BETWEEN #{paramPeriodFrom} AND  #{paramPeriodTo}   -- 기간
+
+                          UNION ALL
+
+                          SELECT cust_cd                                              -- 거래처코드
+                               , 0                  as  o_qty        -- 출고수량
+                               , 0                  as  o_amt        -- 출고금액
+                               , 0                  as  b_qty        -- 반품수량
+                               , 0                  as  b_amt        -- 반품금액
+                               , 0                  as  j_qty        -- 증정
+                               , ifnull(AMT, 0)     as  in_amt       -- 수금액
+
+                          FROM SACCTB
+
+                          where ACC_DAY  BETWEEN #{paramPeriodFrom} AND  #{paramPeriodTo}   -- 기간
+
+
+                      ) a
+                 GROUP BY a.CUST_CD
+
+             ) b
+                 -- 거래처코드
+                 left outer join MCUSTTB as mc ON mc.CUST_CD = b.cust_cd
+
+            WHERE 1=1
+            <if test='paramValue != null and paramValue != ""'>
+                AND ( mc.CUST_NM LIKE CONCAT( '%', #{paramValue }, '%' )
+                OR  b.cust_cd LIKE CONCAT( '%', #{paramValue }, '%')
+                )
+            </if>
+        ORDER BY b.cust_cd
+
+    </select>
+
+    <!-- 년간 도서출고 명세 -->
+    <select id="sal4460_list" resultType="java.util.HashMap">
+        SELECT    b.PROD_CD                     as  prodCd
+                , mp.PROD_NM                    as  prodNm
+                , ifnull(sum(i_01_qty), 0)+ifnull(sum(i_02_qty),0)+ifnull(sum(i_03_qty),0)+ifnull(sum(i_04_qty),0)+ifnull(sum(i_05_qty),0)+ifnull(sum(i_06_qty),0)+ifnull(sum(i_07_qty),0)+ifnull(sum(i_08_qty),0)+ifnull(sum(i_09_qty),0)+ifnull(sum(i_10_qty),0)+ifnull(sum(i_11_qty),0)+ifnull(sum(i_12_qty),0) as totIQty
+                , ifnull(sum(ib_01_qty), 0)+ifnull(sum(ib_02_qty),0)+ifnull(sum(ib_03_qty),0)+ifnull(sum(ib_04_qty),0)+ifnull(sum(ib_05_qty),0)+ifnull(sum(ib_06_qty),0)+ifnull(sum(ib_07_qty),0)+ifnull(sum(ib_08_qty),0)+ifnull(sum(ib_09_qty),0)+ifnull(sum(ib_10_qty),0)+ifnull(sum(ib_11_qty),0)+ifnull(sum(ib_12_qty),0) as totIbQty
+                , ifnull(sum(o_01_qty), 0)+ifnull(sum(o_02_qty),0)+ifnull(sum(o_03_qty),0)+ifnull(sum(o_04_qty),0)+ifnull(sum(o_05_qty),0)+ifnull(sum(o_06_qty),0)+ifnull(sum(o_07_qty),0)+ifnull(sum(o_08_qty),0)+ifnull(sum(o_09_qty),0)+ifnull(sum(o_10_qty),0)+ifnull(sum(o_11_qty),0)+ifnull(sum(o_12_qty),0) as totOQty
+                , ifnull(sum(oj_01_qty), 0)+ifnull(sum(oj_02_qty),0)+ifnull(sum(oj_03_qty),0)+ifnull(sum(oj_04_qty),0)+ifnull(sum(oj_05_qty),0)+ifnull(sum(oj_06_qty),0)+ifnull(sum(oj_07_qty),0)+ifnull(sum(oj_08_qty),0)+ifnull(sum(oj_09_qty),0)+ifnull(sum(oj_10_qty),0)+ifnull(sum(oj_11_qty),0)+ifnull(sum(oj_12_qty),0) as totOjQty
+                , ifnull(sum(ob_01_qty), 0)+ifnull(sum(ob_02_qty),0)+ifnull(sum(ob_03_qty),0)+ifnull(sum(ob_04_qty),0)+ifnull(sum(ob_05_qty),0)+ifnull(sum(ob_06_qty),0)+ifnull(sum(ob_07_qty),0)+ifnull(sum(ob_08_qty),0)+ifnull(sum(ob_09_qty),0)+ifnull(sum(ob_10_qty),0)+ifnull(sum(ob_11_qty),0)+ifnull(sum(ob_12_qty),0) as totObQty
+                , ifnull(sum(ox_01_qty), 0)+ifnull(sum(ox_02_qty),0)+ifnull(sum(ox_03_qty),0)+ifnull(sum(ox_04_qty),0)+ifnull(sum(ox_05_qty),0)+ifnull(sum(ox_06_qty),0)+ifnull(sum(ox_07_qty),0)+ifnull(sum(ox_08_qty),0)+ifnull(sum(ox_09_qty),0)+ifnull(sum(ox_10_qty),0)+ifnull(sum(ox_11_qty),0)+ifnull(sum(ox_12_qty),0) as totOxQty
+                , ifnull(sum(oz_01_qty), 0)+ifnull(sum(oz_02_qty),0)+ifnull(sum(oz_03_qty),0)+ifnull(sum(oz_04_qty),0)+ifnull(sum(oz_05_qty),0)+ifnull(sum(oz_06_qty),0)+ifnull(sum(oz_07_qty),0)+ifnull(sum(oz_08_qty),0)+ifnull(sum(oz_09_qty),0)+ifnull(sum(oz_10_qty),0)+ifnull(sum(oz_11_qty),0)+ifnull(sum(oz_12_qty),0) as totOzQty
+
+                , ifnull(sum(i_01_qty),0)  as m01IQty
+                , ifnull(sum(i_02_qty),0)  as m02IQty
+                , ifnull(sum(i_03_qty),0)  as m03IQty
+                , ifnull(sum(i_04_qty),0)  as m04IQty
+                , ifnull(sum(i_05_qty),0)  as m05IQty
+                , ifnull(sum(i_06_qty),0)  as m06IQty
+                , ifnull(sum(i_07_qty),0)  as m07IQty
+                , ifnull(sum(i_08_qty),0)  as m08IQty
+                , ifnull(sum(i_09_qty),0)  as m09IQty
+                , ifnull(sum(i_10_qty),0)  as m10IQty
+                , ifnull(sum(i_11_qty),0)  as m11IQty
+                , ifnull(sum(i_12_qty),0)  as m12IQty
+
+                , ifnull(sum(ib_01_qty),0)  as m01IbQty
+                , ifnull(sum(ib_02_qty),0)  as m02IbQty
+                , ifnull(sum(ib_03_qty),0)  as m03IbQty
+                , ifnull(sum(ib_04_qty),0)  as m04IbQty
+                , ifnull(sum(ib_05_qty),0)  as m05IbQty
+                , ifnull(sum(ib_06_qty),0)  as m06IbQty
+                , ifnull(sum(ib_07_qty),0)  as m07IbQty
+                , ifnull(sum(ib_08_qty),0)  as m08IbQty
+                , ifnull(sum(ib_09_qty),0)  as m09IbQty
+                , ifnull(sum(ib_10_qty),0)  as m10IbQty
+                , ifnull(sum(ib_11_qty),0)  as m11IbQty
+                , ifnull(sum(ib_12_qty),0)  as m12IbQty
+
+                , ifnull(sum(o_01_qty),0)  as m01OQty
+                , ifnull(sum(o_02_qty),0)  as m02OQty
+                , ifnull(sum(o_03_qty),0)  as m03OQty
+                , ifnull(sum(o_04_qty),0)  as m04OQty
+                , ifnull(sum(o_05_qty),0)  as m05OQty
+                , ifnull(sum(o_06_qty),0)  as m06OQty
+                , ifnull(sum(o_07_qty),0)  as m07OQty
+                , ifnull(sum(o_08_qty),0)  as m08OQty
+                , ifnull(sum(o_09_qty),0)  as m09OQty
+                , ifnull(sum(o_10_qty),0)  as m10OQty
+                , ifnull(sum(o_11_qty),0)  as m11OQty
+                , ifnull(sum(o_12_qty),0)  as m12OQty
+
+                , ifnull(sum(oj_01_qty),0)  as m01OjQty
+                , ifnull(sum(oj_02_qty),0)  as m02OjQty
+                , ifnull(sum(oj_03_qty),0)  as m03OjQty
+                , ifnull(sum(oj_04_qty),0)  as m04OjQty
+                , ifnull(sum(oj_05_qty),0)  as m05OjQty
+                , ifnull(sum(oj_06_qty),0)  as m06OjQty
+                , ifnull(sum(oj_07_qty),0)  as m07OjQty
+                , ifnull(sum(oj_08_qty),0)  as m08OjQty
+                , ifnull(sum(oj_09_qty),0)  as m09OjQty
+                , ifnull(sum(oj_10_qty),0)  as m10OjQty
+                , ifnull(sum(oj_11_qty),0)  as m11OjQty
+                , ifnull(sum(oj_12_qty),0)  as m12OjQty
+
+                , ifnull(sum(ob_01_qty),0)  as m01ObQty
+                , ifnull(sum(ob_02_qty),0)  as m02ObQty
+                , ifnull(sum(ob_03_qty),0)  as m03ObQty
+                , ifnull(sum(ob_04_qty),0)  as m04ObQty
+                , ifnull(sum(ob_05_qty),0)  as m05ObQty
+                , ifnull(sum(ob_06_qty),0)  as m06ObQty
+                , ifnull(sum(ob_07_qty),0)  as m07ObQty
+                , ifnull(sum(ob_08_qty),0)  as m08ObQty
+                , ifnull(sum(ob_09_qty),0)  as m09ObQty
+                , ifnull(sum(ob_10_qty),0)  as m10ObQty
+                , ifnull(sum(ob_11_qty),0)  as m11ObQty
+                , ifnull(sum(ob_12_qty),0)  as m12ObQty
+
+                , ifnull(sum(ox_01_qty),0)  as m01OxQty
+                , ifnull(sum(ox_02_qty),0)  as m02OxQty
+                , ifnull(sum(ox_03_qty),0)  as m03OxQty
+                , ifnull(sum(ox_04_qty),0)  as m04OxQty
+                , ifnull(sum(ox_05_qty),0)  as m05OxQty
+                , ifnull(sum(ox_06_qty),0)  as m06OxQty
+                , ifnull(sum(ox_07_qty),0)  as m07OxQty
+                , ifnull(sum(ox_08_qty),0)  as m08OxQty
+                , ifnull(sum(ox_09_qty),0)  as m09OxQty
+                , ifnull(sum(ox_10_qty),0)  as m10OxQty
+                , ifnull(sum(ox_11_qty),0)  as m11OxQty
+                , ifnull(sum(ox_12_qty),0)  as m12OxQty
+
+                , ifnull(sum(oz_01_qty),0)  as m01OzQty
+                , ifnull(sum(oz_02_qty),0)  as m02OzQty
+                , ifnull(sum(oz_03_qty),0)  as m03OzQty
+                , ifnull(sum(oz_04_qty),0)  as m04OzQty
+                , ifnull(sum(oz_05_qty),0)  as m05OzQty
+                , ifnull(sum(oz_06_qty),0)  as m06OzQty
+                , ifnull(sum(oz_07_qty),0)  as m07OzQty
+                , ifnull(sum(oz_08_qty),0)  as m08OzQty
+                , ifnull(sum(oz_09_qty),0)  as m09OzQty
+                , ifnull(sum(oz_10_qty),0)  as m10OzQty
+                , ifnull(sum(oz_11_qty),0)  as m11OzQty
+                , ifnull(sum(oz_12_qty),0)  as m12OzQty
+            FROM (
+                    SELECT
+                          PROD_CD
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '01' THEN i_qty END AS i_01_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '02' THEN i_qty END AS i_02_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '03' THEN i_qty END AS i_03_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '04' THEN i_qty END AS i_04_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '05' THEN i_qty END AS i_05_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '06' THEN i_qty END AS i_06_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '07' THEN i_qty END AS i_07_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '08' THEN i_qty END AS i_08_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '09' THEN i_qty END AS i_09_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '10' THEN i_qty END AS i_10_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '11' THEN i_qty END AS i_11_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '12' THEN i_qty END AS i_12_qty
+
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '01' THEN ib_qty END AS ib_01_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '02' THEN ib_qty END AS ib_02_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '03' THEN ib_qty END AS ib_03_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '04' THEN ib_qty END AS ib_04_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '05' THEN ib_qty END AS ib_05_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '06' THEN ib_qty END AS ib_06_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '07' THEN ib_qty END AS ib_07_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '08' THEN ib_qty END AS ib_08_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '09' THEN ib_qty END AS ib_09_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '10' THEN ib_qty END AS ib_10_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '11' THEN ib_qty END AS ib_11_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '12' THEN ib_qty END AS ib_12_qty
+
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '01' THEN o_qty END AS o_01_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '02' THEN o_qty END AS o_02_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '03' THEN o_qty END AS o_03_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '04' THEN o_qty END AS o_04_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '05' THEN o_qty END AS o_05_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '06' THEN o_qty END AS o_06_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '07' THEN o_qty END AS o_07_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '08' THEN o_qty END AS o_08_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '09' THEN o_qty END AS o_09_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '10' THEN o_qty END AS o_10_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '11' THEN o_qty END AS o_11_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '12' THEN o_qty END AS o_12_qty
+
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '01' THEN oj_qty END AS oj_01_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '02' THEN oj_qty END AS oj_02_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '03' THEN oj_qty END AS oj_03_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '04' THEN oj_qty END AS oj_04_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '05' THEN oj_qty END AS oj_05_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '06' THEN oj_qty END AS oj_06_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '07' THEN oj_qty END AS oj_07_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '08' THEN oj_qty END AS oj_08_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '09' THEN oj_qty END AS oj_09_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '10' THEN oj_qty END AS oj_10_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '11' THEN oj_qty END AS oj_11_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '12' THEN oj_qty END AS oj_12_qty
+
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '01' THEN ob_qty END AS ob_01_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '02' THEN ob_qty END AS ob_02_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '03' THEN ob_qty END AS ob_03_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '04' THEN ob_qty END AS ob_04_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '05' THEN ob_qty END AS ob_05_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '06' THEN ob_qty END AS ob_06_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '07' THEN ob_qty END AS ob_07_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '08' THEN ob_qty END AS ob_08_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '09' THEN ob_qty END AS ob_09_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '10' THEN ob_qty END AS ob_10_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '11' THEN ob_qty END AS ob_11_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '12' THEN ob_qty END AS ob_12_qty
+
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '01' THEN ox_qty END AS ox_01_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '02' THEN ox_qty END AS ox_02_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '03' THEN ox_qty END AS ox_03_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '04' THEN ox_qty END AS ox_04_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '05' THEN ox_qty END AS ox_05_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '06' THEN ox_qty END AS ox_06_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '07' THEN ox_qty END AS ox_07_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '08' THEN ox_qty END AS ox_08_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '09' THEN ox_qty END AS ox_09_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '10' THEN ox_qty END AS ox_10_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '11' THEN ox_qty END AS ox_11_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '12' THEN ox_qty END AS ox_12_qty
+
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '01' THEN oz_qty END AS oz_01_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '02' THEN oz_qty END AS oz_02_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '03' THEN oz_qty END AS oz_03_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '04' THEN oz_qty END AS oz_04_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '05' THEN oz_qty END AS oz_05_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '06' THEN oz_qty END AS oz_06_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '07' THEN oz_qty END AS oz_07_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '08' THEN oz_qty END AS oz_08_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '09' THEN oz_qty END AS oz_09_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '10' THEN oz_qty END AS oz_10_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '11' THEN oz_qty END AS oz_11_qty
+                        , CASE WHEN substring(STOCK_DAY, 5,2) = '12' THEN oz_qty END AS oz_12_qty
+
+                    FROM  SSTOCKTB st
+                    WHERE left(STOCK_DAY,4) = #{paramYear }
+            ) b
+                left outer join MPRODTB as mp ON mp.PROD_CD = b.PROD_CD
+
+            WHERE 1=1
+            <if test='paramProdDiv != null and paramProdDiv != ""'>
+                AND mp.PROD_DIV = #{paramProdDiv }
+            </if>
+            <if test='paramValue != null and paramValue != ""'>
+                AND ( mp.PROD_NM LIKE CONCAT( '%', #{paramValue }, '%' )
+                OR  b.prod_cd LIKE CONCAT( '%', #{paramValue }, '%')
+                )
+            </if>
+            GROUP BY b.PROD_CD
+
+    </select>
+
+
+    <!-- 년간 거래처 매출 -->
+    <select id="sal4470_list" resultType="java.util.HashMap">
+        SELECT b.CUST_CD        as  custCd
+             , mc.CUST_NM       as  custNm
+             , ifnull(sum(o_01_amt), 0)+ifnull(sum(o_02_amt),0)+ifnull(sum(o_03_amt),0)+ifnull(sum(o_04_amt),0)+ifnull(sum(o_05_amt),0)+ifnull(sum(o_06_amt),0)+ifnull(sum(o_07_amt),0)+ifnull(sum(o_08_amt),0)+ifnull(sum(o_09_amt),0)+ifnull(sum(o_10_amt),0)+ifnull(sum(o_11_amt),0)+ifnull(sum(o_12_amt),0) as totAmt
+             , ifnull(sum(o_01_amt),0)  as m01Amt
+             , ifnull(sum(o_02_amt),0)  as m02Amt
+             , ifnull(sum(o_03_amt),0)  as m03Amt
+             , ifnull(sum(o_04_amt),0)  as m04Amt
+             , ifnull(sum(o_05_amt),0)  as m05Amt
+             , ifnull(sum(o_06_amt),0)  as m06Amt
+             , ifnull(sum(o_07_amt),0)  as m07Amt
+             , ifnull(sum(o_08_amt),0)  as m08Amt
+             , ifnull(sum(o_09_amt),0)  as m09Amt
+             , ifnull(sum(o_10_amt),0)  as m10Amt
+             , ifnull(sum(o_11_amt),0)  as m11Amt
+             , ifnull(sum(o_12_amt),0)  as m12Amt
+        from
+            ( SELECT
+                    CUST_CD
+                  , CASE WHEN substring(SALE_DAY, 5,2) = '01' THEN o_amt - ob_amt END AS o_01_amt
+                  , CASE WHEN substring(SALE_DAY, 5,2) = '02' THEN o_amt - ob_amt END AS o_02_amt
+                  , CASE WHEN substring(SALE_DAY, 5,2) = '03' THEN o_amt - ob_amt END AS o_03_amt
+                  , CASE WHEN substring(SALE_DAY, 5,2) = '04' THEN o_amt - ob_amt END AS o_04_amt
+                  , CASE WHEN substring(SALE_DAY, 5,2) = '05' THEN o_amt - ob_amt END AS o_05_amt
+                  , CASE WHEN substring(SALE_DAY, 5,2) = '06' THEN o_amt - ob_amt END AS o_06_amt
+                  , CASE WHEN substring(SALE_DAY, 5,2) = '07' THEN o_amt - ob_amt END AS o_07_amt
+                  , CASE WHEN substring(SALE_DAY, 5,2) = '08' THEN o_amt - ob_amt END AS o_08_amt
+                  , CASE WHEN substring(SALE_DAY, 5,2) = '09' THEN o_amt - ob_amt END AS o_09_amt
+                  , CASE WHEN substring(SALE_DAY, 5,2) = '10' THEN o_amt - ob_amt END AS o_10_amt
+                  , CASE WHEN substring(SALE_DAY, 5,2) = '11' THEN o_amt - ob_amt END AS o_11_amt
+                  , CASE WHEN substring(SALE_DAY, 5,2) = '12' THEN o_amt - ob_amt END AS o_12_amt
+             FROM  STSALETB a
+             WHERE left(SALE_DAY,4) = #{paramYear } AND (o_amt != 0 OR ob_amt != 0)
+            ) b
+
+                left outer join MCUSTTB as mc ON mc.CUST_CD = b.CUST_CD
+
+        WHERE 1=1
+        <if test='paramValue != null and paramValue != ""'>
+            AND ( mc.CUST_NM LIKE CONCAT( '%', #{paramValue }, '%' )
+            OR  b.CUST_CD LIKE CONCAT( '%', #{paramValue }, '%')
+            )
+        </if>
+
+        GROUP BY b.CUST_CD
+
+    </select>
+
+
+    <!-- 거래처도서출고명세(년) -->
+    <select id="sal4480_list" resultType="java.util.HashMap">
+        set @voj_01_qty := 0, @vox_01_qty := 0, @vob_01_qty := 0, @vob_01_amt := 0, @vo_01_qty := 0, @vo_01_amt := 0;
+        set @voj_02_qty := 0, @vox_02_qty := 0, @vob_02_qty := 0, @vob_02_amt := 0, @vo_02_qty := 0, @vo_02_amt := 0;
+        set @voj_03_qty := 0, @vox_03_qty := 0, @vob_03_qty := 0, @vob_03_amt := 0, @vo_03_qty := 0, @vo_03_amt := 0;
+        set @voj_04_qty := 0, @vox_04_qty := 0, @vob_04_qty := 0, @vob_04_amt := 0, @vo_04_qty := 0, @vo_04_amt := 0;
+        set @voj_05_qty := 0, @vox_05_qty := 0, @vob_05_qty := 0, @vob_05_amt := 0, @vo_05_qty := 0, @vo_05_amt := 0;
+        set @voj_06_qty := 0, @vox_06_qty := 0, @vob_06_qty := 0, @vob_06_amt := 0, @vo_06_qty := 0, @vo_06_amt := 0;
+        set @voj_07_qty := 0, @vox_07_qty := 0, @vob_07_qty := 0, @vob_07_amt := 0, @vo_07_qty := 0, @vo_07_amt := 0;
+        set @voj_08_qty := 0, @vox_08_qty := 0, @vob_08_qty := 0, @vob_08_amt := 0, @vo_08_qty := 0, @vo_08_amt := 0;
+        set @voj_09_qty := 0, @vox_09_qty := 0, @vob_09_qty := 0, @vob_09_amt := 0, @vo_09_qty := 0, @vo_09_amt := 0;
+        set @voj_10_qty := 0, @vox_10_qty := 0, @vob_10_qty := 0, @vob_10_amt := 0, @vo_10_qty := 0, @vo_10_amt := 0;
+        set @voj_11_qty := 0, @vox_11_qty := 0, @vob_11_qty := 0, @vob_11_amt := 0, @vo_11_qty := 0, @vo_11_amt := 0;
+        set @voj_12_qty := 0, @vox_12_qty := 0, @vob_12_qty := 0, @vob_12_amt := 0, @vo_12_qty := 0, @vo_12_amt := 0;
+
+        SELECT    e.prod_cd                 as  prodCd
+                , mp.PROD_NM                as  prodNm
+
+                , @voj_01_qty := e.oj_m01_qty   as  ojM01Qty
+			    , @vox_01_qty := e.ox_m01_qty   as  oxM01Qty
+			    , @vob_01_qty := e.ob_m01_qty   as  obM01Qty
+			    , @vob_01_amt := e.ob_m01_amt   as  obM01Amt
+			    ,  @vo_01_qty :=  e.o_m01_qty   as   oM01Qty
+			    ,  @vo_01_amt :=  e.o_m01_amt   as   oM01Amt
+
+			    , @voj_02_qty := e.oj_m02_qty   as  ojM02Qty
+			    , @vox_02_qty := e.ox_m02_qty   as  oxM02Qty
+			    , @vob_02_qty := e.ob_m02_qty   as  obM02Qty
+			    , @vob_02_amt := e.ob_m02_amt   as  obM02Amt
+			    ,  @vo_02_qty :=  e.o_m02_qty   as   oM02Qty
+			    ,  @vo_02_amt :=  e.o_m02_amt   as   oM02Amt
+
+			    , @voj_03_qty := e.oj_m03_qty   as  ojM03Qty
+			    , @vox_03_qty := e.ox_m03_qty   as  oxM03Qty
+			    , @vob_03_qty := e.ob_m03_qty   as  obM03Qty
+			    , @vob_03_amt := e.ob_m03_amt   as  obM03Amt
+			    ,  @vo_03_qty :=  e.o_m03_qty   as   oM03Qty
+			    ,  @vo_03_amt :=  e.o_m03_amt   as   oM03Amt
+
+			    , @voj_04_qty := e.oj_m04_qty   as  ojM04Qty
+			    , @vox_04_qty := e.ox_m04_qty   as  oxM04Qty
+			    , @vob_04_qty := e.ob_m04_qty   as  obM04Qty
+			    , @vob_04_amt := e.ob_m04_amt   as  obM04Amt
+			    ,  @vo_04_qty :=  e.o_m04_qty   as   oM04Qty
+			    ,  @vo_04_amt :=  e.o_m04_amt   as   oM04Amt
+
+			    , @voj_05_qty := e.oj_m05_qty   as  ojM05Qty
+			    , @vox_05_qty := e.ox_m05_qty   as  oxM05Qty
+			    , @vob_05_qty := e.ob_m05_qty   as  obM05Qty
+			    , @vob_05_amt := e.ob_m05_amt   as  obM05Amt
+			    ,  @vo_05_qty :=  e.o_m05_qty   as   oM05Qty
+			    ,  @vo_05_amt :=  e.o_m05_amt   as   oM05Amt
+
+			    , @voj_06_qty := e.oj_m06_qty   as  ojM06Qty
+			    , @vox_06_qty := e.ox_m06_qty   as  oxM06Qty
+			    , @vob_06_qty := e.ob_m06_qty   as  obM06Qty
+			    , @vob_06_amt := e.ob_m06_amt   as  obM06Amt
+			    ,  @vo_06_qty :=  e.o_m06_qty   as   oM06Qty
+			    ,  @vo_06_amt :=  e.o_m06_amt   as   oM06Amt
+
+			    , @voj_07_qty := e.oj_m07_qty   as  ojM07Qty
+			    , @vox_07_qty := e.ox_m07_qty   as  oxM07Qty
+			    , @vob_07_qty := e.ob_m07_qty   as  obM07Qty
+			    , @vob_07_amt := e.ob_m07_amt   as  obM07Amt
+			    ,  @vo_07_qty :=  e.o_m07_qty   as   oM07Qty
+			    ,  @vo_07_amt :=  e.o_m07_amt   as   oM07Amt
+
+			    , @voj_08_qty := e.oj_m08_qty   as  ojM08Qty
+			    , @vox_08_qty := e.ox_m08_qty   as  oxM08Qty
+			    , @vob_08_qty := e.ob_m08_qty   as  obM08Qty
+			    , @vob_08_amt := e.ob_m08_amt   as  obM08Amt
+			    ,  @vo_08_qty :=  e.o_m08_qty   as   oM08Qty
+			    ,  @vo_08_amt :=  e.o_m08_amt   as   oM08Amt
+
+			    , @voj_09_qty := e.oj_m09_qty   as  ojM09Qty
+			    , @vox_09_qty := e.ox_m09_qty   as  oxM09Qty
+			    , @vob_09_qty := e.ob_m09_qty   as  obM09Qty
+			    , @vob_09_amt := e.ob_m09_amt   as  obM09Amt
+			    ,  @vo_09_qty :=  e.o_m09_qty   as   oM09Qty
+			    ,  @vo_09_amt :=  e.o_m09_amt   as   oM09Amt
+
+			    , @voj_10_qty := e.oj_m10_qty   as  ojM10Qty
+			    , @vox_10_qty := e.ox_m10_qty   as  oxM10Qty
+			    , @vob_10_qty := e.ob_m10_qty   as  obM10Qty
+			    , @vob_10_amt := e.ob_m10_amt   as  obM10Amt
+			    ,  @vo_10_qty :=  e.o_m10_qty   as   oM10Qty
+			    ,  @vo_10_amt :=  e.o_m10_amt   as   oM10Amt
+
+			    , @voj_11_qty := e.oj_m11_qty   as  ojM11Qty
+			    , @vox_11_qty := e.ox_m11_qty   as  oxM11Qty
+			    , @vob_11_qty := e.ob_m11_qty   as  obM11Qty
+			    , @vob_11_amt := e.ob_m11_amt   as  obM11Amt
+			    ,  @vo_11_qty :=  e.o_m11_qty   as   oM11Qty
+			    ,  @vo_11_amt :=  e.o_m11_amt   as   oM11Amt
+
+			    , @voj_12_qty := e.oj_m12_qty   as  ojM12Qty
+			    , @vox_12_qty := e.ox_m12_qty   as  oxM12Qty
+			    , @vob_12_qty := e.ob_m12_qty   as  obM12Qty
+			    , @vob_12_amt := e.ob_m12_amt   as  obM12Amt
+			    ,  @vo_12_qty :=  e.o_m12_qty   as   oM12Qty
+			    ,  @vo_12_amt :=  e.o_m12_amt   as   oM12Amt
+
+			    , @voj_01_qty + @voj_02_qty + @voj_03_qty + @voj_04_qty + @voj_05_qty + @voj_06_qty + @voj_07_qty + @voj_08_qty + @voj_09_qty + @voj_10_qty + @voj_11_qty + @voj_12_qty   as  tOjQty
+			    , @vox_01_qty + @vox_02_qty + @vox_03_qty + @vox_04_qty + @vox_05_qty + @vox_06_qty + @vox_07_qty + @vox_08_qty + @vox_09_qty + @vox_10_qty + @vox_11_qty + @vox_12_qty   as  tOxQty
+			    , @vob_01_qty + @vob_02_qty + @vob_03_qty + @vob_04_qty + @vob_05_qty + @vob_06_qty + @vob_07_qty + @vob_08_qty + @vob_09_qty + @vob_10_qty + @vob_11_qty + @vob_12_qty   as  tObQty
+			    , @vob_01_amt + @vob_02_amt + @vob_03_amt + @vob_04_amt + @vob_05_amt + @vob_06_amt + @vob_07_amt + @vob_08_amt + @vob_09_amt + @vob_10_amt + @vob_11_amt + @vob_12_amt   as  tObAmt
+			    ,  @vo_01_qty +  @vo_02_qty +  @vo_03_qty +  @vo_04_qty +  @vo_05_qty +  @vo_06_qty +  @vo_07_qty +  @vo_08_qty +  @vo_09_qty +  @vo_10_qty +  @vo_11_qty +  @vo_12_qty   as  tOQty
+			    ,  @vo_01_amt +  @vo_02_amt +  @vo_03_amt +  @vo_04_amt +  @vo_05_amt +  @vo_06_amt +  @vo_07_amt +  @vo_08_amt +  @vo_09_amt +  @vo_10_amt +  @vo_11_amt +  @vo_12_amt   as  tOAmt
+
+        FROM (
+
+            SELECT    d.PROD_CD               as  prod_cd
+
+                , ifnull(sum(d.oj_01_qty),0)  as  oj_m01_qty
+                , ifnull(sum(d.ox_01_qty),0)  as  ox_m01_qty
+                , ifnull(sum(d.ob_01_qty),0)  as  ob_m01_qty
+                , ifnull(sum(d.ob_01_amt),0)  as  ob_m01_amt
+                , ifnull(sum(d.o_01_qty),0) as   o_m01_qty
+                , ifnull(sum(d.o_01_amt),0) as   o_m01_amt
+
+                , ifnull(sum(d.oj_02_qty),0)  as  oj_m02_qty
+                , ifnull(sum(d.ox_02_qty),0) as  ox_m02_qty
+                , ifnull(sum(d.ob_02_qty),0) as  ob_m02_qty
+                , ifnull(sum(d.ob_02_amt),0) as  ob_m02_amt
+                , ifnull(sum(d.o_02_qty),0)  as   o_m02_qty
+                , ifnull(sum(d.o_02_amt),0)  as   o_m02_amt
+
+                , ifnull(sum(d.oj_03_qty),0) as  oj_m03_qty
+                , ifnull(sum(d.ox_03_qty),0) as  ox_m03_qty
+                , ifnull(sum(d.ob_03_qty),0) as  ob_m03_qty
+                , ifnull(sum(d.ob_03_amt),0) as  ob_m03_amt
+                , ifnull(sum(d.o_03_qty),0)  as   o_m03_qty
+                , ifnull(sum(d.o_03_amt),0)  as   o_m03_amt
+
+                , ifnull(sum(d.oj_04_qty),0) as  oj_m04_qty
+                , ifnull(sum(d.ox_04_qty),0) as  ox_m04_qty
+                , ifnull(sum(d.ob_04_qty),0) as  ob_m04_qty
+                , ifnull(sum(d.ob_04_amt),0) as  ob_m04_amt
+                , ifnull(sum(d.o_04_qty),0)  as   o_m04_qty
+                , ifnull(sum(d.o_04_amt),0)  as   o_m04_amt
+
+                , ifnull(sum(d.oj_05_qty),0) as  oj_m05_qty
+                , ifnull(sum(d.ox_05_qty),0) as  ox_m05_qty
+                , ifnull(sum(d.ob_05_qty),0) as  ob_m05_qty
+                , ifnull(sum(d.ob_05_amt),0) as  ob_m05_amt
+                , ifnull(sum(d.o_05_qty),0)  as   o_m05_qty
+                , ifnull(sum(d.o_05_amt),0)  as   o_m05_amt
+
+                , ifnull(sum(d.oj_06_qty),0) as  oj_m06_qty
+                , ifnull(sum(d.ox_06_qty),0) as  ox_m06_qty
+                , ifnull(sum(d.ob_06_qty),0) as  ob_m06_qty
+                , ifnull(sum(d.ob_06_amt),0) as  ob_m06_amt
+                , ifnull(sum(d.o_06_qty),0)  as   o_m06_qty
+                , ifnull(sum(d.o_06_amt),0)  as   o_m06_amt
+
+                , ifnull(sum(d.oj_07_qty),0) as  oj_m07_qty
+                , ifnull(sum(d.ox_07_qty),0) as  ox_m07_qty
+                , ifnull(sum(d.ob_07_qty),0) as  ob_m07_qty
+                , ifnull(sum(d.ob_07_amt),0) as  ob_m07_amt
+                , ifnull(sum(d.o_07_qty),0)  as   o_m07_qty
+                , ifnull(sum(d.o_07_amt),0)  as   o_m07_amt
+
+                , ifnull(sum(d.oj_08_qty),0) as  oj_m08_qty
+                , ifnull(sum(d.ox_08_qty),0) as  ox_m08_qty
+                , ifnull(sum(d.ob_08_qty),0) as  ob_m08_qty
+                , ifnull(sum(d.ob_08_amt),0) as  ob_m08_amt
+                , ifnull(sum(d.o_08_qty),0)  as   o_m08_qty
+                , ifnull(sum(d.o_08_amt),0)  as   o_m08_amt
+
+                , ifnull(sum(d.oj_09_qty),0) as  oj_m09_qty
+                , ifnull(sum(d.ox_09_qty),0) as  ox_m09_qty
+                , ifnull(sum(d.ob_09_qty),0) as  ob_m09_qty
+                , ifnull(sum(d.ob_09_amt),0) as  ob_m09_amt
+                , ifnull(sum(d.o_09_qty),0)  as   o_m09_qty
+                , ifnull(sum(d.o_09_amt),0)  as   o_m09_amt
+
+                , ifnull(sum(d.oj_10_qty),0) as  oj_m10_qty
+                , ifnull(sum(d.ox_10_qty),0) as  ox_m10_qty
+                , ifnull(sum(d.ob_10_qty),0) as  ob_m10_qty
+                , ifnull(sum(d.ob_10_amt),0) as  ob_m10_amt
+                , ifnull(sum(d.o_10_qty),0)  as   o_m10_qty
+                , ifnull(sum(d.o_10_amt),0)  as   o_m10_amt
+
+                , ifnull(sum(d.oj_11_qty),0) as  oj_m11_qty
+                , ifnull(sum(d.ox_11_qty),0) as  ox_m11_qty
+                , ifnull(sum(d.ob_11_qty),0) as  ob_m11_qty
+                , ifnull(sum(d.ob_11_amt),0) as  ob_m11_amt
+                , ifnull(sum(d.o_11_qty),0)  as   o_m11_qty
+                , ifnull(sum(d.o_11_amt),0)  as   o_m11_amt
+
+                , ifnull(sum(d.oj_12_qty),0) as  oj_m12_qty
+                , ifnull(sum(d.ox_12_qty),0) as  ox_m12_qty
+                , ifnull(sum(d.ob_12_qty),0) as  ob_m12_qty
+                , ifnull(sum(d.ob_12_amt),0) as  ob_m12_amt
+                , ifnull(sum(d.o_12_qty),0)  as   o_m12_qty
+                , ifnull(sum(d.o_12_amt),0)  as   o_m12_amt
+
+            FROM (
+                SELECT
+                      c.prod_cd                 AS prod_cd
+                    , CASE WHEN c.o_month = '01' THEN c.oj_qty END AS oj_01_qty
+                    , CASE WHEN c.o_month = '01' THEN c.ox_qty END AS ox_01_qty
+                    , CASE WHEN c.o_month = '01' THEN c.ob_qty END AS ob_01_qty
+                    , CASE WHEN c.o_month = '01' THEN c.ob_amt END AS ob_01_amt
+                    , CASE WHEN c.o_month = '01' THEN c.o_qty  END AS  o_01_qty
+                    , CASE WHEN c.o_month = '01' THEN c.o_amt  END AS  o_01_amt
+
+                    , CASE WHEN c.o_month = '02' THEN c.oj_qty END AS oj_02_qty
+                    , CASE WHEN c.o_month = '02' THEN c.ox_qty END AS ox_02_qty
+                    , CASE WHEN c.o_month = '02' THEN c.ob_qty END AS ob_02_qty
+                    , CASE WHEN c.o_month = '02' THEN c.ob_amt END AS ob_02_amt
+                    , CASE WHEN c.o_month = '02' THEN c.o_qty  END AS  o_02_qty
+                    , CASE WHEN c.o_month = '02' THEN c.o_amt  END AS  o_02_amt
+
+                    , CASE WHEN c.o_month = '03' THEN c.oj_qty END AS oj_03_qty
+                    , CASE WHEN c.o_month = '03' THEN c.ox_qty END AS ox_03_qty
+                    , CASE WHEN c.o_month = '03' THEN c.ob_qty END AS ob_03_qty
+                    , CASE WHEN c.o_month = '03' THEN c.ob_amt END AS ob_03_amt
+                    , CASE WHEN c.o_month = '03' THEN c.o_qty  END AS  o_03_qty
+                    , CASE WHEN c.o_month = '03' THEN c.o_amt  END AS  o_03_amt
+
+                    , CASE WHEN c.o_month = '04' THEN c.oj_qty END AS oj_04_qty
+                    , CASE WHEN c.o_month = '04' THEN c.ox_qty END AS ox_04_qty
+                    , CASE WHEN c.o_month = '04' THEN c.ob_qty END AS ob_04_qty
+                    , CASE WHEN c.o_month = '04' THEN c.ob_amt END AS ob_04_amt
+                    , CASE WHEN c.o_month = '04' THEN c.o_qty  END AS  o_04_qty
+                    , CASE WHEN c.o_month = '04' THEN c.o_amt  END AS  o_04_amt
+
+                    , CASE WHEN c.o_month = '05' THEN c.oj_qty END AS oj_05_qty
+                    , CASE WHEN c.o_month = '05' THEN c.ox_qty END AS ox_05_qty
+                    , CASE WHEN c.o_month = '05' THEN c.ob_qty END AS ob_05_qty
+                    , CASE WHEN c.o_month = '05' THEN c.ob_amt END AS ob_05_amt
+                    , CASE WHEN c.o_month = '05' THEN c.o_qty  END AS  o_05_qty
+                    , CASE WHEN c.o_month = '05' THEN c.o_amt  END AS  o_05_amt
+
+                    , CASE WHEN c.o_month = '06' THEN c.oj_qty END AS oj_06_qty
+                    , CASE WHEN c.o_month = '06' THEN c.ox_qty END AS ox_06_qty
+                    , CASE WHEN c.o_month = '06' THEN c.ob_qty END AS ob_06_qty
+                    , CASE WHEN c.o_month = '06' THEN c.ob_amt END AS ob_06_amt
+                    , CASE WHEN c.o_month = '06' THEN c.o_qty  END AS  o_06_qty
+                    , CASE WHEN c.o_month = '06' THEN c.o_amt  END AS  o_06_amt
+
+                    , CASE WHEN c.o_month = '07' THEN c.oj_qty END AS oj_07_qty
+                    , CASE WHEN c.o_month = '07' THEN c.ox_qty END AS ox_07_qty
+                    , CASE WHEN c.o_month = '07' THEN c.ob_qty END AS ob_07_qty
+                    , CASE WHEN c.o_month = '07' THEN c.ob_amt END AS ob_07_amt
+                    , CASE WHEN c.o_month = '07' THEN c.o_qty  END AS  o_07_qty
+                    , CASE WHEN c.o_month = '07' THEN c.o_amt  END AS  o_07_amt
+
+                    , CASE WHEN c.o_month = '08' THEN c.oj_qty END AS oj_08_qty
+                    , CASE WHEN c.o_month = '08' THEN c.ox_qty END AS ox_08_qty
+                    , CASE WHEN c.o_month = '08' THEN c.ob_qty END AS ob_08_qty
+                    , CASE WHEN c.o_month = '08' THEN c.ob_amt END AS ob_08_amt
+                    , CASE WHEN c.o_month = '08' THEN c.o_qty  END AS  o_08_qty
+                    , CASE WHEN c.o_month = '08' THEN c.o_amt  END AS  o_08_amt
+
+                    , CASE WHEN c.o_month = '09' THEN c.oj_qty END AS oj_09_qty
+                    , CASE WHEN c.o_month = '09' THEN c.ox_qty END AS ox_09_qty
+                    , CASE WHEN c.o_month = '09' THEN c.ob_qty END AS ob_09_qty
+                    , CASE WHEN c.o_month = '09' THEN c.ob_amt END AS ob_09_amt
+                    , CASE WHEN c.o_month = '09' THEN c.o_qty  END AS  o_09_qty
+                    , CASE WHEN c.o_month = '09' THEN c.o_amt  END AS  o_09_amt
+
+                    , CASE WHEN c.o_month = '10' THEN c.oj_qty END AS oj_10_qty
+                    , CASE WHEN c.o_month = '10' THEN c.ox_qty END AS ox_10_qty
+                    , CASE WHEN c.o_month = '10' THEN c.ob_qty END AS ob_10_qty
+                    , CASE WHEN c.o_month = '10' THEN c.ob_amt END AS ob_10_amt
+                    , CASE WHEN c.o_month = '10' THEN c.o_qty  END AS  o_10_qty
+                    , CASE WHEN c.o_month = '10' THEN c.o_amt  END AS  o_10_amt
+
+                    , CASE WHEN c.o_month = '11' THEN c.oj_qty END AS oj_11_qty
+                    , CASE WHEN c.o_month = '11' THEN c.ox_qty END AS ox_11_qty
+                    , CASE WHEN c.o_month = '11' THEN c.ob_qty END AS ob_11_qty
+                    , CASE WHEN c.o_month = '11' THEN c.ob_amt END AS ob_11_amt
+                    , CASE WHEN c.o_month = '11' THEN c.o_qty  END AS  o_11_qty
+                    , CASE WHEN c.o_month = '11' THEN c.o_amt  END AS  o_11_amt
+
+                    , CASE WHEN c.o_month = '12' THEN c.oj_qty END AS oj_12_qty
+                    , CASE WHEN c.o_month = '12' THEN c.ox_qty END AS ox_12_qty
+                    , CASE WHEN c.o_month = '12' THEN c.ob_qty END AS ob_12_qty
+                    , CASE WHEN c.o_month = '12' THEN c.ob_amt END AS ob_12_amt
+                    , CASE WHEN c.o_month = '12' THEN c.o_qty  END AS  o_12_qty
+                    , CASE WHEN c.o_month = '12' THEN c.o_amt  END AS  o_12_amt
+
+                FROM (
+
+                    SELECT    substring(b.o_day,5,2)  as  o_month
+                            , b.PROD_CD     as  prod_cd
+                            , sum(b.oj_qty) as  oj_qty
+                            , sum(b.ox_qty) as  ox_qty
+                            , sum(b.ob_qty) as  ob_qty
+                            , sum(b.ob_amt) as  ob_amt
+                            , sum(b.o_qty)  as  o_qty
+                            , sum(b.o_amt)  as  o_amt
+                    FROM (
+                        SELECT
+                              o.DEAL_DAY                          as O_DAY
+                            , o.PROD_CD                           as PROD_CD
+
+                            , if(left(o.DEAL_FG,2) = '12' AND o.DIV_CD = '1', ifnull(o.QTY,0) , 0)   as OJ_QTY   -- 증정 수량
+                            , if(left(o.DEAL_FG,2) = '19' AND o.DIV_CD = '1', ifnull(o.QTY,0) , 0)   as OX_QTY   -- 폐기 수량
+
+                            , if(o.DIV_CD = '9', ifnull(o.QTY,0) , 0)               as OB_QTY   -- 반품 수량
+                            , if(o.DIV_CD = '9', ifnull(o.AMT,0) , 0)               as OB_AMT   -- 반품 금액
+
+                            , if(o.DIV_CD != '9' AND left(o.DEAL_FG,2) = '11', ifnull(o.QTY,0) , 0)  as O_QTY    -- 정상출고 수량
+                            , if(o.DIV_CD != '9' AND left(o.DEAL_FG,2) = '11', ifnull(o.AMT,0) , 0)  as O_AMT    -- 정상출고 금액
+
+                            , now() as UPDATE_DATE
+                        FROM SDEALDTB o
+                        WHERE left(o.DEAL_DAY, 4) = #{paramYear }
+                          AND o.CUST_CD = #{paramCustCd }
+                        ) b
+                        GROUP BY left(b.o_day,6), b.prod_cd
+                    ) c
+                ) d
+                GROUP BY  d.prod_cd
+            ) e
+            left outer join MPRODTB as mp ON mp.PROD_CD = e.PROD_CD
+
+            WHERE 1=1
+            <if test='paramValue != null and paramValue != ""'>
+                AND ( mp.PROD_NM LIKE CONCAT( '%', #{paramValue }, '%' )
+                OR  e.PROD_CD LIKE CONCAT( '%', #{paramValue }, '%')
+                )
+            </if>
+
     </select>
 
 
