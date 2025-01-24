@@ -1008,6 +1008,83 @@
     </delete>
 
 
+    <!-- ###  에이젠트 불러오기 list    ################################ -->
+    <select id="mst2040_list" resultType="java.util.HashMap">
+        SELECT
+              d.AGENT_CD   		    as	agentCd
+            , d.AGENT_CD   		    as	oldAgentCd
+            , d.AGENT_NM			as	agentNm
+            , d.MAKE_DAY			as	makeDay
+            , d.OUT_DAY 			as	outDay
+            , d.EXPLAINS 			as	explains
+            , d.REG_DATE			as	regDate
+            , d.REG_ID				as	regId
+            , d.UPDATE_DATE			as	updateDate
+            , d.UPDATE_ID			as	updateId
+            , 'R'                   as  iuD
+
+        FROM MAGENTTB d
+        WHERE 1 = 1
+        <if test='paramValue != null and paramValue != ""'>
+            AND (
+            LOWER(d.AGENT_CD) LIKE CONCAT( '%', #{paramValue }, '%' )
+            OR
+            LOWER(d.AGENT_NM) LIKE CONCAT( '%', #{paramValue }, '%' )
+            )
+        </if>
+    </select>
+
+    <insert id="mst2040_insert" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            INSERT INTO MAGENTTB
+                (
+                      AGENT_CD
+                    , AGENT_NM
+                    , MAKE_DAY
+                    , OUT_DAY
+                    , EXPLAINS
+                    , REG_DATE
+                    , REG_ID
+                    , UPDATE_DATE
+                    , UPDATE_ID
+                ) VALUES (
+                      #{item.agentCd }
+                    , #{item.agentNm }
+                    , #{item.makeDay }
+                    , #{item.outDay }
+                    , #{item.explain }
+                    , now()
+                    , #{userId}
+                    , now()
+                    , #{userId}
+                )
+        </foreach>
+    </insert>
+
+    <update id="mst2040_update" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            UPDATE MAGENTTB
+                SET
+                      AGENT_CD        =   #{item.agentCd }
+                    , AGENT_NM        =   #{item.agentNm }
+                    , MAKE_DAY        =   #{item.makeDay }
+                    , OUT_DAY         =   #{item.outDay }
+                    , EXPLAINS        =   #{item.explains }
+                    , UPDATE_DATE    =   now()
+                    , UPDATE_ID      =   #{userId }
+
+            WHERE AGENT_CD  =   #{item.oldAgentCd}
+        </foreach>
+    </update>
+
+    <delete id="mst2040_delete" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            DELETE FROM MAGENTTB
+            WHERE AGENT_CD  =   #{item.agentCd}
+        </foreach>
+    </delete>
+
+
     <!--    공통코드 list -->
     <select id="mst5090_list" resultType="java.util.HashMap">
         SELECT

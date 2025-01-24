@@ -26,7 +26,7 @@ import java.sql.DatabaseMetaData;
 
 @Configuration
 @PropertySource("classpath:application.properties")
-@MapperScan(value = {"com.iszion.api.auth.mapper", "com.iszion.api.sys.dao", "com.iszion.api.mst.dao", "com.iszion.api.sal.dao", "com.iszion.api.aux.dao"}, sqlSessionFactoryRef = "db1SqlSessionFactory")
+@MapperScan(value = {"com.iszion.api.auth.mapper", "com.iszion.api.sys.dao", "com.iszion.api.mst.dao", "com.iszion.api.sal.dao", "com.iszion.api.aux.dao", "com.iszion.api.fee.dao"}, sqlSessionFactoryRef = "db1SqlSessionFactory")
 @EnableTransactionManagement
 public class Database1Config {
 

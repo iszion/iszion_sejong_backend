@@ -1265,6 +1265,121 @@ public class MstController {
 
 
     /* *******************************************************************************
+     ** 에이젠트 처리부분 부분
+     ** ******************************************************************************* */
+    @PostMapping("/mst2040_list")
+    public String mst2040_list(HttpServletRequest request, @RequestHeader("Authorization") String token) throws IOException {
+        Object result;
+
+        String jsonDataRtn = "";
+        RequestUtil requestUtil = new RequestUtil();
+        JsonUtils jsonUtils = new JsonUtils();
+
+        String jsonData = requestUtil.getBody(request);
+
+        Map<String, Object> reqParam = new HashMap<String, Object>();
+        if (!jsonData.isEmpty()) {
+            reqParam = jsonUtils.jsonStringToMap(jsonData);
+        }
+        try {
+            result = mstService.selectQryList("mst2040_list", reqParam);
+
+            Map<String, Object> jsonList = new HashMap<>();
+            jsonList.put("data", result);
+
+            jsonDataRtn = jsonUtils.getToJson(jsonList);
+            jsonDataRtn = jsonDataRtn.replaceAll("null", "\"\"");
+//            LOGGER.info("-------------------" + jsonDataRtn);
+
+        } catch (Exception e) {
+            LOGGER.info("Exception : " + e.getMessage());
+            e.printStackTrace();
+
+        }
+        return jsonDataRtn;
+    }
+
+    @PostMapping("/mst2040_save")
+    public String mst2040_save(HttpServletRequest request, @RequestHeader("Authorization") String token) throws Exception {
+        String accessToken = token.substring(7);
+        Authentication userInfo = jwtTokenProvider.getAuthentication(accessToken);
+
+        // 트랜잭션 정의
+        DefaultTransactionDefinition def = new DefaultTransactionDefinition();
+        def.setName("SomeTxName");
+        def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
+        TransactionStatus status = db1TransactionManager.getTransaction(def);
+        // 트랜잭션 정의 끝
+
+
+        String jsonDataRtn = "";
+        String rtn = "0";
+        String rtnMsg = "";
+        List<?> divde = null;
+        Map<String, Object> map = new HashMap();
+        JsonUtils jsonUtil = new JsonUtils();
+        DataRequestUtil reqUtil = new DataRequestUtil();
+
+        String jsonData = reqUtil.getBody(request);
+        try {
+            Map<String, Object> mapDivde = jsonUtil.jsonStringToMap(jsonData);
+            Map divde_N1 =  (Map) mapDivde.get("no1");
+            if (divde_N1 != null) {
+                List divde_I = (List) divde_N1.get("I");
+                List divde_U = (List) divde_N1.get("U");
+                List divde_D = (List) divde_N1.get("D");
+
+                if (!divde_I.isEmpty()) {
+                    Map param = new HashMap();
+                    param.put("list1", divde_I);
+                    param.put("userId", userInfo.getName());
+                    int rtnI = mstService.insertQry("mst2040_insert", param);
+                    if(rtnI > 0)  { if(rtn == "0") {rtn = "0";} else {rtn = "1"; }} else { rtn = "1"; }
+                    divde = divde_I;
+                }
+
+                if (!divde_U.isEmpty()) {
+                    Map param = new HashMap();
+                    param.put("list1", divde_U);
+                    param.put("userId", userInfo.getName());
+                    int rtnU = mstService.updateQry("mst2040_update", param);
+                    if(rtnU > 0)  { if(rtn == "0") {rtn = "0";} else {rtn = "1"; }} else { rtn = "1"; }
+                    divde = divde_U;
+                }
+
+                if (!divde_D.isEmpty()) {
+                    Map param = new HashMap();
+                    param.put("list1", divde_D);
+                    param.put("userId", userInfo.getName());
+                    int rtnD = mstService.deleteQry("mst2040_delete", param);
+                    if(rtnD > 0)  { if(rtn == "0") {rtn = "0";} else {rtn = "1"; }} else { rtn = "1"; }
+                    divde = divde_D;
+                }
+            }
+            if(rtn == "0") {
+                rtnMsg = "정상 처리되었습니다.";
+                db1TransactionManager.commit(status);
+            } else {
+                rtnMsg = "비정상 처리되었습니다.";
+                db1TransactionManager.rollback(status);
+            }
+        } catch (Exception e) {
+            db1TransactionManager.rollback(status);
+            rtn = "3";
+            if (e.getCause() instanceof SQLException sqlException) {
+                rtnMsg = "처리실패 : " + sqlException.getMessage();  // Get the specific error message from SQLException
+            } else {
+                rtnMsg = "예상치 못한 오류가 발생했습니다.";
+            }
+        }
+        map.put("rtn", rtn);
+        map.put("rtnMsg", rtnMsg);
+        map.put("data", divde);
+        jsonDataRtn = jsonUtil.getToJson(map).replaceAll("null", "\"\"");
+        return jsonDataRtn;
+    }
+
+    /* *******************************************************************************
      ** 공통코드 처리부분 부분
      ** ******************************************************************************* */
     @PostMapping("/mst5090_list")

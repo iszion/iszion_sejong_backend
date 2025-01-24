@@ -65,7 +65,7 @@
             OR g.GN_MST = 'Y' AND a.LOCATION = 'mst'
             OR g.GN_AUX = 'Y' AND a.LOCATION = 'aux'
             OR g.GN_SYS = 'Y' AND a.LOCATION = 'sys'
-            OR g.GN_PAY = 'Y' AND a.LOCATION = 'pay'
+            OR g.GN_FEE = 'Y' AND a.LOCATION = 'fee'
             OR g.GN_SAL = 'Y' AND a.LOCATION = 'sal'
             OR g.GN_COS = 'Y' AND a.LOCATION = 'cos'
             OR a.LOCATION = 'fav')
@@ -466,7 +466,7 @@
             , IFNULL(g.GN_AUX,'N')		as	gnAux
             , IFNULL(g.GN_MST,'N')		as	gnMst
             , IFNULL(g.GN_SYS,'N')		as	gnSys
-            , IFNULL(g.GN_PAY,'N')		as	gnPay
+            , IFNULL(g.GN_FEE,'N')		as	gnFee
             , IFNULL(g.GN_SAL,'N')		as	gnSal
             , IFNULL(g.GN_COS,'N')		as	gnCos
             , IF(g.USER_ID is null, 'I', 'U')  as  iuD
@@ -497,7 +497,7 @@
             , GN_MST
             , GN_AUX
             , GN_MKT
-            , GN_PAY
+            , GN_FEE
             , GN_SAL
             , GN_COS
             , UPDATE_DATE
@@ -508,8 +508,8 @@
             , #{item.gnSys}
             , #{item.gnMst}
             , #{item.gnAux}
-            , #{item.gnPay}
             , #{item.gnMkt}
+            , #{item.gnFee}
             , #{item.gnSal}
             , #{item.gnCos}
             , NOW()
@@ -528,7 +528,7 @@
                 ,   GN_MST          =   #{item.gnMst}
                 ,   GN_AUX          =   #{item.gnAux}
                 ,   GN_MKT          =   #{item.gnMkt}
-                ,   GN_PAY          =   #{item.gnPay}
+                ,   GN_FEE          =   #{item.gnFee}
                 ,   GN_SAL          =   #{item.gnSal}
                 ,   GN_COS          =   #{item.gnCos}
                 ,   UPDATE_DATE     =   NOW()
@@ -670,7 +670,7 @@
             , GN_MST
             , GN_AUX
             , GN_MKT
-            , GN_PAY
+            , GN_FEE
             , GN_SAL
             , GN_COS
             , UPDATE_DATE
@@ -683,7 +683,7 @@
             , GN_MST
             , GN_AUX
             , GN_MKT
-            , GN_PAY
+            , GN_FEE
             , GN_SAL
             , GN_COS
             , NOW()

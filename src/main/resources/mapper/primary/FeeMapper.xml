@@ -1,0 +1,354 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.iszion.api.fee.dao.FeeDAO">
+
+    <!-- ###  인세기준정보    ################################ -->
+    <select id="fee1010_list" resultType="java.util.HashMap">
+        SELECT
+                  mp.PROD_CD                        as  prodCd
+                , mp.PROD_NM                        as  prodNm
+                , mp.AUTHOR_NM                      as  authorNm
+                , mp.S_PRICE                        as  sPrice
+                , fh.AGENT_CD                       as  agentCd
+                , ag.AGENT_NM                       as  agentNm
+                , if(fh.AGENT_CD != '', 'Y', 'N')   as  chYn
+                , fh.STOP_YN                        as  stopYn
+                , count(fh.PROD_CD)                 as  hCnt
+            FROM MPRODTB mp
+                -- 선인세check
+                left outer join SFEESHTB as fh ON fh.PROD_CD = mp.PROD_CD
+                -- 에이젠트 구분
+                left outer join MAGENTTB as ag on ag.AGENT_CD = mp.AGENT_CD
+
+        WHERE 1=1
+            <if test='paramUseYn == "Y"'>
+                AND  fh.AGENT_CD  !=  ''
+            </if>
+            AND fh.STOP_YN = #{paramStopYn}
+            <if test='paramValue != null and paramValue != ""'>
+                AND ( mp.PROD_NM LIKE CONCAT( '%', #{paramValue }, '%' )
+                OR  mp.PROD_CD LIKE CONCAT( '%', #{paramValue }, '%')
+                OR  ag.AGENT_NM LIKE CONCAT( '%', #{paramValue }, '%')
+                )
+            </if>
+        GROUP BY mp.PROD_CD
+        ORDER BY mp.PROD_CD
+
+    </select>
+
+    <select id="fee1010_select_list" resultType="java.util.HashMap">
+        SELECT
+               fh.PROD_CD           as  prodCd
+             , fh.AGENT_CD          as  agentCd
+             , ag.AGENT_NM          as  agentNm
+             , fh.FEES_SDAY         as  feesSday
+             , fh.FEES_EDAY         as  feesEday
+             , fh.CALC_FG           as  calcFg
+             , fh.COND_FG           as  condFg
+            FROM SFEESHTB fh
+                 -- 에이젠트 구분
+                 left outer join MAGENTTB as ag ON ag.AGENT_CD = fh.AGENT_CD
+
+            WHERE fh.PROD_CD  =   #{paramProdCd }
+            ORDER BY fh.AGENT_CD
+
+    </select>
+
+    <select id="fee1010_select_header" resultType="java.util.HashMap">
+        SELECT
+               fh.PROD_CD           as  prodCd
+             , fh.AGENT_CD          as  agentCd
+             , fh.AGENT_CD          as  oldAgentCd
+             , ag.AGENT_NM          as  agentNm
+             , fh.FEES_SDAY         as  feesSday
+             , fh.FEES_EDAY         as  feesEday
+             , fh.CALC_FG           as  calcFg
+             , fh.COND_FG           as  condFg
+             , fh.STOP_YN           as  stopYn
+             , fh.REMARKS           as  remarks
+        FROM SFEESHTB fh
+             -- 에이젠트 구분
+             left outer join MAGENTTB as ag ON ag.AGENT_CD = fh.AGENT_CD
+
+        WHERE fh.PROD_CD     =  #{paramProdCd }
+          AND fh.AGENT_CD    =  #{paramAgentCd }
+
+    </select>
+
+   <select id="fee1010_select_details" resultType="java.util.HashMap">
+       SELECT
+              fd.PROD_CD        as  prodCd
+            , fd.AGENT_CD       as  agentCd
+            , fd.AGENT_CD       as  oldAgentCd
+            , fd.SEQ            as  seq
+            , fd.BASE_QTY       as  baseQty
+            , fd.BASE_YUL       as  baseYul
+            , fd.BASE_AMT       as  baseAmt
+            , fd.REMARKS        as  remarks
+            , "R"               as  iuD
+       FROM SFEESDTB fd
+
+       where fd.PROD_CD = #{paramProdCd }
+         AND fd.AGENT_CD = #{paramAgentCd }
+       order by fd.SEQ
+
+    </select>
+
+
+    <insert id="fee1010_insert_header" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            INSERT INTO SFEESHTB
+                (
+                      PROD_CD
+                    , AGENT_CD
+                    , FEES_SDAY
+                    , FEES_EDAY
+                    , FEES_FG
+                    , CALC_FG
+                    , COND_FG
+                    , PM_QTY
+                    , STOP_YN
+                    , REMARKS
+                    , REG_DATE
+                    , REG_ID
+                    , UPDATE_DATE
+                    , UPDATE_ID
+                ) VALUES (
+                      #{item.prodCd}
+                    , #{item.agentCd}
+                    , #{item.feesSday}
+                    , #{item.feesEday}
+                    , #{item.feesFg}
+                    , #{item.calcFg}
+                    , #{item.condFg}
+                    , #{item.pmQty}
+                    , #{item.stopYn}
+                    , #{item.remarks}
+                    , NOW()
+                    , #{userId}
+                    , NOW()
+                    , #{userId}
+                )
+        </foreach>
+    </insert>
+
+    <update id="fee1010_update_header" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            UPDATE SFEESHTB
+                SET
+                      AGENT_CD      =   #{item.agentCd}
+                    , FEES_SDAY     =   #{item.feesSday}
+                    , FEES_EDAY     =   #{item.feesEday}
+                    , FEES_EDAY     =   #{item.feesEday}
+                    , FEES_FG       =   #{item.feesFg}
+                    , CALC_FG       =   #{item.calcFg}
+                    , COND_FG       =   #{item.condFg}
+                    , PM_QTY        =   #{item.pmQty}
+                    , STOP_YN       =   #{item.stopYn}
+                    , REMARKS       =   #{item.remarks}
+                    , UPDATE_DATE   =   NOW()
+                    , UPDATE_ID     =   #{userId}
+                WHERE PROD_CD       =   #{item.prodCd}
+                  AND AGENT_CD      =   #{item.oldAgentCd}
+        </foreach>
+    </update>
+
+    <delete id="fee1010_delete_header" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            DELETE FROM SFEESHTB
+            WHERE PROD_CD       =   #{item.prodCd}
+              AND AGENT_CD      =   #{item.agentCd}
+        </foreach>
+    </delete>
+
+    <delete id="fee1010_delete_details_all" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            DELETE FROM SFEESDTB
+            WHERE PROD_CD       =   #{item.prodCd}
+              AND AGENT_CD      =   #{item.agentCd}
+        </foreach>
+    </delete>
+
+    <insert id="fee1010_insert_details" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            INSERT INTO SFEESDTB
+                (
+                      PROD_CD
+                    , AGENT_CD
+                    , SEQ
+                    , BASE_QTY
+                    , BASE_YUL
+                    , BASE_AMT
+                    , REMARKS
+                    , REG_DATE
+                    , REG_ID
+                    , UPDATE_DATE
+                    , UPDATE_ID
+                ) VALUES (
+                      #{item.prodCd}
+                    , #{item.agentCd}
+                    , (SELECT IFNULL( MAX(fd.SEQ) + 1, 1) as seq
+                         FROM SFEESDTB fd
+                        WHERE fd.PROD_CD   =   #{item.prodCd}
+                          AND fd.AGENT_CD 	= 	#{item.agentCd}
+                        )
+                    , #{item.baseQty}
+                    , #{item.baseYul}
+                    , #{item.baseAmt}
+                    , #{item.remarks}
+                    , NOW()
+                    , #{userId}
+                    , NOW()
+                    , #{userId}
+                )
+        </foreach>
+    </insert>
+
+    <update id="fee1010_update_details" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            UPDATE SFEESDTB
+                SET
+                      AGENT_CD      =   #{item.agentCd}
+                    , BASE_QTY      =   #{item.baseQty}
+                    , BASE_YUL      =   #{item.baseYul}
+                    , BASE_AMT      =   #{item.baseAmt}
+                    , REMARKS       =   #{item.remarks}
+                    , UPDATE_DATE   =   NOW()
+                    , UPDATE_ID     =   #{userId}
+                WHERE PROD_CD       =   #{item.prodCd}
+                  AND AGENT_CD      =   #{item.oldAgentCd}
+                  AND SEQ           =   #{item.seq}
+        </foreach>
+    </update>
+
+    <delete id="fee1010_delete_details" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            DELETE FROM SFEESDTB
+            WHERE PROD_CD       =   #{item.prodCd}
+              AND AGENT_CD      =   #{item.agentCd}
+              AND SEQ           =   #{item.seq}
+        </foreach>
+    </delete>
+
+    <!-- ###  인세 정산조정    ################################ -->
+    <select id="fee1020_list" resultType="java.util.HashMap">
+        SELECT
+              mp.PROD_CD        as  prodCd
+            , mp.PROD_NM        as  prodNm
+            , mp.PROD_CL        as  prodCl  -- 1:국내 2:국외
+            , IF(mp.PROD_CL = '1','국내',if(mp.PROD_CL = '2', '국외', '')) as	prodClNm
+            , fh.AGENT_CD       as  agentCd
+            , ag.AGENT_NM       as  agentNm
+        FROM MPRODTB mp
+            left outer join SFEESHTB fh ON fh.PROD_CD  =  mp.PROD_CD
+            left outer join MAGENTTB ag ON ag.AGENT_CD  =  fh.AGENT_CD
+        WHERE fh.STOP_YN != 'Y'
+          AND fh.PROD_CD !=  ''
+        <if test='paramValue != null and paramValue != ""'>
+            AND ( mp.PROD_NM LIKE CONCAT( '%', #{paramValue }, '%' )
+            OR  mp.PROD_CD LIKE CONCAT( '%', #{paramValue }, '%')
+            OR  ag.AGENT_NM LIKE CONCAT( '%', #{paramValue }, '%')
+            )
+        </if>
+
+    </select>
+
+    <select id="fee1020_select_list" resultType="java.util.HashMap">
+        SELECT
+                  a.PROC_YEAR     as  prodYear
+                , a.PROC_MONTH    as  procMonth
+                , a.WO_QTY        as  woQty
+                , a.W_QTY         as  wQty
+                , a.PM_QTY        as  pmQty
+                , a.W_AMT         as  wAmt
+                , a.P_AMT         as  pAmt
+                , a.E_AMT         as  eAmt
+                , a.D_AMT         as  dAmt
+                , a.REMARKS       as  remarks
+                , a.PROD_CD       as  prodCd
+                , a.AGENT_CD      as  agentCd
+                , a.PROC_YEAR     as  oldProcYear
+                , a.PROC_MONTH    as  oldProcMonth
+                , 'R'             as  iuD
+        FROM SFEESWTB a
+
+        where   a.PROD_CD   =   #{paramProdCd }
+          and   a.AGENT_CD  =   #{paramAgentCd }
+
+        order by a.PROC_YEAR asc, PROC_MONTH asc
+    </select>
+
+    <insert id="fee1020_insert" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            INSERT INTO SFEESWTB (
+                      PROD_CD
+                    , AGENT_CD
+                    , PROC_YEAR
+                    , PROC_MONTH
+                    , WO_QTY
+                    , W_QTY
+                    , PM_QTY
+                    , W_AMT
+                    , P_AMT
+                    , E_AMT
+                    , D_AMT
+                    , REMARKS
+                    , REG_DATE
+                    , REG_ID
+                    , UPDATE_DATE
+                    , UPDATE_ID
+            ) VALUES (
+                      #{item.prodCd }
+                    , #{item.agentCd }
+                    , #{item.procYear }
+                    , #{item.procMonth }
+                    , #{item.woQty }
+                    , #{item.wQty }
+                    , #{item.pmQty }
+                    , #{item.wAmt }
+                    , #{item.pAmt }
+                    , #{item.eAmt }
+                    , #{item.dAmt }
+                    , #{item.remarks }
+                    , NOW()
+                    , #{userId}
+                    , NOW()
+                    , #{userId}
+            )
+        </foreach>
+    </insert>
+
+    <update id="fee1020_update" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            UPDATE SFEESWTB
+                SET
+                      PROC_YEAR     =   #{item.procYear }
+                    , PROC_MONTH    =   #{item.procMonth }
+                    , WO_QTY        =   #{item.woQty }
+                    , W_QTY         =   #{item.wQty }
+                    , PM_QTY        =   #{item.pmQty }
+                    , W_AMT         =   #{item.wAmt }
+                    , P_AMT         =   #{item.pAmt }
+                    , E_AMT         =   #{item.eAmt }
+                    , D_AMT         =   #{item.dAmt }
+                    , REMARKS       =   #{item.remarks }
+                    , UPDATE_DATE   =   NOW()
+                    , UPDATE_ID     =   #{userId}
+            WHERE PROD_CD       =   #{item.prodCd}
+              AND AGENT_CD      =   #{item.oldAgentCd}
+              AND PROC_YEAR     =  #{item.oldYear }
+              AND PROC_MONTH    =  #{item.oldMonth }
+        </foreach>
+    </update>
+
+    <delete id="fee1020_delete" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            DELETE FROM SFEESWTB
+            WHERE PROD_CD       =   #{item.prodCd}
+              AND AGENT_CD      =   #{item.agentCd}
+              AND PROC_YEAR     =   #{item.oldYear }
+              AND PROC_MONTH    =   #{item.oldMonth }
+        </foreach>
+    </delete>
+
+</mapper>
