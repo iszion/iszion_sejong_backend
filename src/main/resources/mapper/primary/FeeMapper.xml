@@ -237,17 +237,24 @@
             , mp.PROD_NM        as  prodNm
             , mp.PROD_CL        as  prodCl  -- 1:국내 2:국외
             , IF(mp.PROD_CL = '1','국내',if(mp.PROD_CL = '2', '국외', '')) as	prodClNm
+            , ROW_NUMBER() OVER (PARTITION BY mp.PROD_CD ORDER BY fh.FEES_SDAY)     as  agentSeq
             , fh.AGENT_CD       as  agentCd
+            , CONCAT(STR_TO_DATE(fh.FEES_SDAY, '%Y%m%d'), ' ~ ', STR_TO_DATE(fh.FEES_EDAY, '%Y%m%d'))   as  feesPeriod
+            , fh.FEES_EDAY      as  feesEday
+            , fh.REMARKS        as  remarks
             , ag.AGENT_NM       as  agentNm
+            , (SELECT count(*) FROM SFEESWTB fw WHERE fw.PROD_CD = mp.PROD_CD AND fw.AGENT_CD = fh.AGENT_CD)  as fwCnt
         FROM MPRODTB mp
             left outer join SFEESHTB fh ON fh.PROD_CD  =  mp.PROD_CD
             left outer join MAGENTTB ag ON ag.AGENT_CD  =  fh.AGENT_CD
-        WHERE fh.STOP_YN != 'Y'
+        WHERE mp.PROD_CL = #{paramProdCl }
+          AND fh.STOP_YN != 'Y'
           AND fh.PROD_CD !=  ''
         <if test='paramValue != null and paramValue != ""'>
             AND ( mp.PROD_NM LIKE CONCAT( '%', #{paramValue }, '%' )
             OR  mp.PROD_CD LIKE CONCAT( '%', #{paramValue }, '%')
             OR  ag.AGENT_NM LIKE CONCAT( '%', #{paramValue }, '%')
+            OR  fh.AGENT_CD LIKE CONCAT( '%', #{paramValue }, '%')
             )
         </if>
 
@@ -255,20 +262,20 @@
 
     <select id="fee1020_select_list" resultType="java.util.HashMap">
         SELECT
-                  a.PROC_YEAR     as  prodYear
+                  a.PROC_YEAR     as  procYear
                 , a.PROC_MONTH    as  procMonth
-                , a.WO_QTY        as  woQty
-                , a.W_QTY         as  wQty
-                , a.PM_QTY        as  pmQty
-                , a.W_AMT         as  wAmt
-                , a.P_AMT         as  pAmt
-                , a.E_AMT         as  eAmt
-                , a.D_AMT         as  dAmt
+                , a.PROC_YEAR     as  oldProcYear
+                , a.PROC_MONTH    as  oldProcMonth
+                , a.WO_QTY        as  woQty     -- 이월미정산수량
+                , a.W_QTY         as  wQty      -- 정산누적수량
+                , a.PM_QTY        as  pmQty     -- 홍보수량
+                , a.W_AMT         as  wAmt      -- 선인세금액
+                , a.P_AMT         as  pAmt      -- 종이책중간정산금액(상반기정산액)
+                , a.E_AMT         as  eAmt      -- 전자책정산금액
+                , a.D_AMT         as  dAmt      -- 소멸액 (인세기간후 남아있는 금액)
                 , a.REMARKS       as  remarks
                 , a.PROD_CD       as  prodCd
                 , a.AGENT_CD      as  agentCd
-                , a.PROC_YEAR     as  oldProcYear
-                , a.PROC_MONTH    as  oldProcMonth
                 , 'R'             as  iuD
         FROM SFEESWTB a
 
@@ -335,9 +342,9 @@
                     , UPDATE_DATE   =   NOW()
                     , UPDATE_ID     =   #{userId}
             WHERE PROD_CD       =   #{item.prodCd}
-              AND AGENT_CD      =   #{item.oldAgentCd}
-              AND PROC_YEAR     =  #{item.oldYear }
-              AND PROC_MONTH    =  #{item.oldMonth }
+              AND AGENT_CD      =   #{item.agentCd}
+              AND PROC_YEAR     =  #{item.oldProcYear }
+              AND PROC_MONTH    =  #{item.oldProcMonth }
         </foreach>
     </update>
 
@@ -346,9 +353,171 @@
             DELETE FROM SFEESWTB
             WHERE PROD_CD       =   #{item.prodCd}
               AND AGENT_CD      =   #{item.agentCd}
-              AND PROC_YEAR     =   #{item.oldYear }
-              AND PROC_MONTH    =   #{item.oldMonth }
+              AND PROC_YEAR     =   #{item.procYear }
+              AND PROC_MONTH    =   #{item.procMonth }
         </foreach>
     </delete>
+
+    <!-- ###  인세 지급액관리    ################################ -->
+    <select id="fee1030_list" resultType="java.util.HashMap">
+        SELECT
+              fj.PROD_CD  	       as	prodCd
+            , fj.PROD_CD           as   prodCdOld
+            , fj.AGENT_CD          as   agentCd
+            , fj.AGENT_CD          as   agentCdOld
+            , fj.PROC_YEAR         as   procYear
+            , fj.PROC_MONTH        as   procMonth
+            , mp.PROD_NM           as   prodNm
+            , aj.AGENT_NM          as   agentNm
+            , fj.J_AMT             as   jAmt
+            , fj.REMARKS           as   remarks
+            ,'R'                   as   iuD
+        FROM SFEESJTB fj
+            -- 도서코드
+            left outer join MPRODTB mp ON mp.PROD_CD  = fj.PROD_CD
+            -- 에이젠트 구분
+            left outer join MAGENTTB aj ON aj.AGENT_CD = fj.AGENT_CD
+
+        WHERE fj.PROC_YEAR    =   #{paramProcYear }
+          AND fj.PROC_MONTH   =   #{paramProcMonth }
+        ORDER BY fj.PROD_CD, fj.AGENT_CD
+
+    </select>
+
+    <insert id="fee1030_insert" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            INSERT INTO SFEESJTB (
+                      PROC_YEAR
+                    , PROC_MONTH
+                    , AGENT_CD
+                    , PROD_CD
+                    , J_AMT
+                    , REMARKS
+                    , REG_DATE
+                    , REG_ID
+                    , UPDATE_DATE
+                    , UPDATE_ID
+            ) VALUES (
+                      #{item.procYear }
+                    , #{item.procMonth }
+                    , #{item.agentCd }
+                    , #{item.prodCd }
+                    , #{item.jAmt }
+                    , #{item.remarks }
+                    , NOW()
+                    , #{userId}
+                    , NOW()
+                    , #{userId}
+            )
+        </foreach>
+    </insert>
+
+    <update id="fee1030_update" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            UPDATE SFEESJTB
+                SET
+                      AGENT_CD      =   #{item.agentCd }
+                    , PROD_CD       =   #{item.prodCd }
+                    , J_AMT         =   #{item.jAmt }
+                    , REMARKS       =   #{item.remarks }
+                    , UPDATE_DATE   =   NOW()
+                    , UPDATE_ID     =   #{userId}
+            WHERE PROC_YEAR     =   #{item.procYear }
+              AND PROC_MONTH    =   #{item.procMonth }
+              AND AGENT_CD      =   #{item.agentCdOld}
+              AND PROD_CD       =   #{item.prodCdOld}
+        </foreach>
+    </update>
+
+    <delete id="fee1030_delete" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            DELETE FROM SFEESJTB
+                 WHERE PROC_YEAR    =   #{item.procYear }
+                  AND PROC_MONTH    =   #{item.procMonth }
+                  AND AGENT_CD      =   #{item.agentCd}
+                  AND PROD_CD       =   #{item.prodCd}
+        </foreach>
+    </delete>
+
+
+    <!-- ###  선인세 잔액명세    ################################ -->
+    <select id="fee3010_list" resultType="java.util.HashMap">
+        SELECT    b.agent_cd                               as  agentCd
+                , b.agent_nm                               as  agentNm
+                , b.s_amt                                  as  sAmt
+                , b.w_amt                                  as  wAmt
+                , b.o_amt                                  as  oAmt
+                , b.j_amt                                  as  jAmt
+                , ''                                        as  remarks
+            FROM (
+                    SELECT    a.agent_cd                                  as  agent_cd
+                            , ag.AGENT_NM                                 as  agent_nm
+                            , sum(a.s_amt)                                as  s_amt
+                            , sum(a.w_amt)                                as  w_amt
+                            , sum(a.o_amt)                                as  o_amt
+                            , sum(a.s_amt) - sum(a.w_amt) - sum(a.o_amt)  as  j_amt
+
+                        FROM (
+                                SELECT    agent_cd               as  agent_cd
+                                        , sum(IFNULL(s_amt, 0))  as  s_amt   -- 선인세 누적합계
+                                        , 0                      as  w_amt
+                                        , 0                      as  o_amt
+                                    FROM SFEESTTB
+                                    WHERE CONCAT(proc_year, proc_month)  <![CDATA[<=]]>  CONCAT(#{paramYear }, #{paramMonth })
+                                    GROUP BY agent_cd
+
+                                UNION ALL
+
+                                SELECT    agent_cd                as  agent_cd
+                                        , 0                       as  s_amt
+                                        , sum(IFNULL(o_amt, 0))   as  w_amt   -- 정산인세 전월누적 합계
+                                        , 0                       as  o_amt
+                                    FROM SFEESTTB
+                                    WHERE CONCAT(proc_year, proc_month)  <![CDATA[<]]>  CONCAT(#{paramYear }, #{paramMonth })
+                                    AND o_amt != 0
+                                    GROUP BY agent_cd
+
+                                UNION ALL
+
+                                SELECT    agent_cd                as  agent_cd
+                                        , 0                       as  s_amt
+                                        , 0                       as  w_amt
+                                        ,  sum(IFNULL(o_amt, 0))  as  o_amt   -- 당월 정산인세 합계
+                                    FROM SFEESTTB
+                                    WHERE CONCAT(proc_year, proc_month)  =   CONCAT(#{paramYear }, #{paramMonth })
+                                    AND o_amt != 0
+                                    GROUP BY agent_cd
+                        ) a
+                            -- 공통코드 (에이젠시)
+                            left outer join MAGENTTB ag ON ag.AGENT_CD = a.AGENT_CD
+
+                    WHERE 1=1
+                    GROUP BY a.AGENT_CD
+                ) b
+            WHERE b.j_amt > 0  OR b.s_amt != 0
+    </select>
+
+    <!-- ###  인세정산확정명세    ################################ -->
+    <select id="fee3020_list" resultType="java.util.HashMap">
+        SELECT    ft.PROC_YEAR      as  procYear
+                , ft.PROD_CD        as  prodCd
+                , mp.PROD_NM        as  prodNm
+                , ft.AGENT_CD       as  agentCd
+                , ag.AGENT_NM       as  agentNm
+                , CONCAT(ft.PROC_MONTH, '월')    as  procMonth
+                , sum(ft.S_AMT)     as  sAmt
+                , sum(ft.o_AMT)     as  oAmt
+                , sum(ft.O_QTY)     as  oQty
+        FROM SFEESTTB ft
+                 -- 도서코드
+                 left outer join MPRODTB mp ON mp.PROD_CD = ft.PROD_CD
+            -- 공통코드 (에이젠시)
+                 left outer join MAGENTTB ag ON ag.AGENT_CD = ft.AGENT_CD
+
+        WHERE ft.PROC_YEAR = #{paramYear }
+          AND mp.PROD_CL = #{paramProdCl }
+          AND NOT(ft.S_AMT=0 AND ft.O_AMT=0 AND ft.O_QTY=0)
+        GROUP BY ft.PROD_CD, ft.AGENT_CD, ft.PROC_MONTH
+    </select>
 
 </mapper>

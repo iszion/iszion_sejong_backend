@@ -1928,6 +1928,70 @@
             ORDER BY a.PROD_CD asc
     </select>
 
+    <!-- 기간별 입출 재고표  -->
+    <select id="sal4130_list" resultType="java.util.HashMap">
+        SELECT
+                  a.PROD_CD							as	prodCd
+                , mp.PROD_NM                        as  prodNm
+                , mp.S_PRICE                        as  sPrice  -- 정가
+                , sum(a.WJ_QTY)                     as  wjQty   -- 이월재고
+                , sum(a.I_QTY)                      as  iQty    -- 입고
+                , sum(a.O_QTY)                      as  oQty    -- 출고
+                , sum(a.J_QTY)                      as  jQty    -- 증정
+                , sum(a.B_QTY)                      as  bQty    -- 반품
+                , sum(a.X_QTY)                      as  xQty    -- 폐기
+                , sum(a.Z_QTY)                      as  zQty    -- 조정
+                , sum(a.O_QTY) - sum(a.B_QTY)       as  tQty    -- 순출고계
+                , (sum(a.WJ_QTY) + sum(a.I_QTY)) - (sum(a.O_QTY) + sum(a.J_QTY) + sum(a.X_QTY) + sum(a.Z_QTY)) + sum(a.B_QTY) as  yjQty -- 재고
+            FROM  (
+                    SELECT
+                              PROD_CD
+                            , ifnull(sum(I_QTY),0) - (ifnull(sum(O_QTY),0)+ifnull(sum(OJ_QTY),0)+ifnull(sum(OX_QTY),0)+ifnull(sum(OZ_QTY),0)) + ifnull(sum(OB_QTY),0) as wj_qty   -- 이월재고
+                            , 0  as  I_QTY
+                            , 0  as  O_QTY
+                            , 0  as  J_QTY
+                            , 0  as  b_QTY
+                            , 0  as  X_QTY
+                            , 0  as  Z_QTY
+                        FROM SSTOCKTB
+                        WHERE STOCK_DAY   <![CDATA[<]]>   #{paramPeriodFrom } AND NOT(I_QTY=0 AND IB_QTY=0 AND O_QTY=0 AND OJ_QTY=0 AND OX_QTY=0 AND OZ_QTY=0 AND OB_QTY=0)
+                        GROUP BY PROD_CD
+
+                    UNION ALL
+
+                    SELECT
+                              PROD_CD
+                            , 0                     as  WJ_QTY  -- 이월재고
+                            , ifnull(sum(I_QTY),0)  as  I_QTY   -- 입고
+                            , ifnull(sum(O_QTY),0)  as  O_QTY   -- 출고
+                            , ifnull(sum(OJ_QTY),0) as  J_QTY   -- 증정
+                            , ifnull(sum(OB_QTY),0) as  B_QTY   -- 반품
+                            , ifnull(sum(OX_QTY),0) as  X_QTY   -- 폐기
+                            , ifnull(sum(OZ_QTY),0) as  Z_QTY   -- 조정
+                        FROM  SSTOCKTB
+                        WHERE STOCK_DAY between #{paramPeriodFrom } AND #{paramPeriodTo }
+                        AND NOT(I_QTY=0 AND IB_QTY=0 AND O_QTY=0 AND OJ_QTY=0 AND OX_QTY=0 AND OZ_QTY=0 AND OB_QTY=0)
+
+                        GROUP BY PROD_CD
+            ) a
+
+            left outer join MPRODTB as mp ON mp.PROD_CD = a.PROD_CD
+
+        WHERE 1=1
+            <if test='paramProdCl != null and paramProdCl != ""'>
+                AND  mp.PROD_CL  =   #{paramProdCl }
+            </if>
+
+            <if test='paramValue != null and paramValue != ""'>
+                AND ( mp.PROD_NM LIKE CONCAT( '%', #{paramValue }, '%' )
+                OR  a.PROD_CD LIKE CONCAT( '%', #{paramValue }, '%')
+                )
+            </if>
+
+        GROUP BY a.PROD_CD
+        ORDER BY mp.PUB_DAY DESC
+    </select>
+
     <!-- 입출재고조회(월)  -->
     <select id="sal4210_list" resultType="java.util.HashMap">
         SET @w_qty:=0, @wb_qty:=0;
