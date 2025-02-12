@@ -1,18 +1,19 @@
-package com.iszion.api.mst.dao;
+package com.iszion.api.com.dao;
 
 import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Repository;
 
+import java.util.HashMap;
 import java.util.List;
 
-@Repository("mstDAO")
-public class MstDAO {
+@Repository("comDAO")
+public class ComDAO {
 
     @Autowired
-    @Qualifier("secondarySqlSessionTemplate")
-    private SqlSessionTemplate secondarySqlSessionTemplate;
+    @Qualifier("primarySqlSessionTemplate")
+    private SqlSessionTemplate primarySqlSessionTemplate;
 
     /**
      * 조회 한건
@@ -21,7 +22,17 @@ public class MstDAO {
      * @exception Exception
      */
     public Object selectQryOne(String queryId,Object searchObj) throws Exception {
-        return secondarySqlSessionTemplate.selectOne(queryId, searchObj);
+        return primarySqlSessionTemplate.selectOne(queryId, searchObj);
+    }
+
+    /**
+     * 조회 한건
+     * @param
+     * @return
+     * @exception Exception
+     */
+    public HashMap<String, Object> selectQryOne1(String queryId, Object searchObj) throws Exception {
+        return primarySqlSessionTemplate.selectOne(queryId, searchObj);
     }
     /**
      * 조회리스트
@@ -30,7 +41,7 @@ public class MstDAO {
      * @exception Exception
      */
     public List<?> selectQryList(String queryId, Object searchObj) throws Exception {
-        return secondarySqlSessionTemplate.selectList(queryId, searchObj);
+        return primarySqlSessionTemplate.selectList(queryId, searchObj);
     }
     /**
      * 조회리스트
@@ -39,7 +50,7 @@ public class MstDAO {
      * @exception Exception
      */
     public Object selectQryListCnt(String queryId,Object searchObj) throws Exception {
-        return secondarySqlSessionTemplate.selectOne(queryId, searchObj);
+        return primarySqlSessionTemplate.selectOne(queryId, searchObj);
     }
     /**
      * 입력
@@ -48,7 +59,7 @@ public class MstDAO {
      * @exception Exception
      */
     public int insertQry(String queryId,Object searchObj) throws Exception {
-        return secondarySqlSessionTemplate.insert(queryId, searchObj);
+        return primarySqlSessionTemplate.insert(queryId, searchObj);
     }
     /**
      * 수정
@@ -57,7 +68,7 @@ public class MstDAO {
      * @exception Exception
      */
     public int updateQry(String queryId,Object searchObj) throws Exception {
-        return secondarySqlSessionTemplate.update(queryId, searchObj);
+        return primarySqlSessionTemplate.update(queryId, searchObj);
     }
     /**
      *  삭제
@@ -66,6 +77,6 @@ public class MstDAO {
      * @exception Exception
      */
     public int deleteQry(String queryId,Object searchObj) throws Exception {
-        return secondarySqlSessionTemplate.delete(queryId, searchObj);
+        return primarySqlSessionTemplate.delete(queryId, searchObj);
     }
 }

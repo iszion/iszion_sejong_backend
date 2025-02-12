@@ -27,17 +27,6 @@
     <!-- *************************************************************************************************  -->
     <!-- ***********   sal2020  (코업 출고접수 쿼리)정보 DB SQL    *********************************************  -->
     <!-- *************************************************************************************************  -->
-    <select id="dataTest" resultType="java.util.HashMap">
-     SELECT
-        ymd
-            , ccd
-            , sejem
-            , chasu
-            , dose
-        from dbo.RETU_BAN
-        where ccd = '0151'
-         AND ymd = '24/12/12'
-    </select>
     <select id="sal2020_coup_select_list" resultType="java.util.HashMap">
         SELECT
                ymd

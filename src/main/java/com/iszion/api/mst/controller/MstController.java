@@ -45,8 +45,8 @@ public class MstController {
     private final JwtTokenProvider jwtTokenProvider;
 //    private final PlatformTransactionManager transactionManager;  // 트랜잭션 매니저
 
-    @Qualifier("db1TransactionManager")  // Use @Qualifier to inject the specific transaction manager for db1
-    private final PlatformTransactionManager db1TransactionManager;
+    @Qualifier("secondaryTransactionManager")  // Use @Qualifier to inject the specific transaction manager for secondary
+    private final PlatformTransactionManager secondaryTransactionManager;
 
     @Value("${file.upload.folder}")
     private String UPLOAD_DIR;
@@ -361,7 +361,7 @@ public class MstController {
         DefaultTransactionDefinition def = new DefaultTransactionDefinition();
         def.setName("SomeTxName");
         def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
-        TransactionStatus status = db1TransactionManager.getTransaction(def);
+        TransactionStatus status = secondaryTransactionManager.getTransaction(def);
         // 트랜잭션 정의 끝
 
 
@@ -435,14 +435,14 @@ public class MstController {
             }
             if(rtn == "0") {
                 rtnMsg = "정상 처리되었습니다.";
-                db1TransactionManager.commit(status);
+                secondaryTransactionManager.commit(status);
 
             } else {
                 rtnMsg = "비정상 처리되었습니다.";
-                db1TransactionManager.rollback(status);
+                secondaryTransactionManager.rollback(status);
             }
         } catch (Exception e) {
-            db1TransactionManager.rollback(status);
+            secondaryTransactionManager.rollback(status);
             rtn = "3";
             if (e.getCause() instanceof SQLException sqlException) {
                 rtnMsg = "처리실패 : " + sqlException.getMessage();
@@ -506,7 +506,7 @@ public class MstController {
         DefaultTransactionDefinition def = new DefaultTransactionDefinition();
         def.setName("SomeTxName");
         def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
-        TransactionStatus status = db1TransactionManager.getTransaction(def);
+        TransactionStatus status = secondaryTransactionManager.getTransaction(def);
         // 트랜잭션 정의 끝
 
         File file = new File(UPLOAD_DIR + "/images/" + filename);
@@ -519,13 +519,13 @@ public class MstController {
             int result = mstService.deleteQry("mst1010_fileDelete", param);
 
             if (file.exists() && file.delete() && fileThumb.exists() && fileThumb.delete() && result > 0) {
-                db1TransactionManager.commit(status);
+                secondaryTransactionManager.commit(status);
                 return ResponseEntity.ok("SUCCESS");
             }
-            db1TransactionManager.rollback(status);
+            secondaryTransactionManager.rollback(status);
             return ResponseEntity.ok("ERROR");
         } catch (Exception e) {
-            db1TransactionManager.rollback(status);
+            secondaryTransactionManager.rollback(status);
             return ResponseEntity.ok("ERROR : " + e.getMessage());
         }
     }
@@ -537,7 +537,7 @@ public class MstController {
         DefaultTransactionDefinition def = new DefaultTransactionDefinition();
         def.setName("SomeTxName");
         def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
-        TransactionStatus status = db1TransactionManager.getTransaction(def);
+        TransactionStatus status = secondaryTransactionManager.getTransaction(def);
         // 트랜잭션 정의 끝
 
 
@@ -571,10 +571,10 @@ public class MstController {
 
             // 데이터베이스 업데이트 (썸네일 경로 포함)
             int result = mstService.updateQry("mst1010_fileSave_sign", param);
-            db1TransactionManager.commit(status);
+            secondaryTransactionManager.commit(status);
             return ResponseEntity.ok("SUCCESS");
         } catch (Exception e) {
-            db1TransactionManager.rollback(status);
+            secondaryTransactionManager.rollback(status);
             return ResponseEntity.ok("ERROR : " + e.getMessage());
         }
     }
@@ -586,7 +586,7 @@ public class MstController {
         DefaultTransactionDefinition def = new DefaultTransactionDefinition();
         def.setName("SomeTxName");
         def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
-        TransactionStatus status = db1TransactionManager.getTransaction(def);
+        TransactionStatus status = secondaryTransactionManager.getTransaction(def);
         // 트랜잭션 정의 끝
 
         File file = new File(UPLOAD_DIR + "/images/sign/" + filename);
@@ -598,13 +598,13 @@ public class MstController {
             int result = mstService.deleteQry("mst1010_fileDelete_sign", param);
 
             if (file.exists() && file.delete() && result > 0) {
-                db1TransactionManager.commit(status);
+                secondaryTransactionManager.commit(status);
                 return ResponseEntity.ok("SUCCESS");
             }
-            db1TransactionManager.commit(status);
+            secondaryTransactionManager.commit(status);
             return ResponseEntity.ok("ERROR");
         } catch (Exception e) {
-            db1TransactionManager.rollback(status);
+            secondaryTransactionManager.rollback(status);
             return ResponseEntity.ok("ERROR : " + e.getMessage());
         }
     }
@@ -750,7 +750,7 @@ public class MstController {
         DefaultTransactionDefinition def = new DefaultTransactionDefinition();
         def.setName("SomeTxName");
         def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
-        TransactionStatus status = db1TransactionManager.getTransaction(def);
+        TransactionStatus status = secondaryTransactionManager.getTransaction(def);
         // 트랜잭션 정의 끝
 
 
@@ -800,13 +800,13 @@ public class MstController {
             }
             if(rtn == "0") {
                 rtnMsg = "정상 처리되었습니다.";
-                db1TransactionManager.commit(status);
+                secondaryTransactionManager.commit(status);
             } else {
                 rtnMsg = "비정상 처리되었습니다.";
-                db1TransactionManager.rollback(status);
+                secondaryTransactionManager.rollback(status);
             }
         } catch (Exception e) {
-            db1TransactionManager.rollback(status);
+            secondaryTransactionManager.rollback(status);
             rtn = "3";
             if (e.getCause() instanceof SQLException sqlException) {
                 rtnMsg = "처리실패 : " + sqlException.getMessage();  // Get the specific error message from SQLException
@@ -962,7 +962,7 @@ public class MstController {
         DefaultTransactionDefinition def = new DefaultTransactionDefinition();
         def.setName("SomeTxName");
         def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
-        TransactionStatus status = db1TransactionManager.getTransaction(def);
+        TransactionStatus status = secondaryTransactionManager.getTransaction(def);
         // 트랜잭션 정의 끝
 
 
@@ -1012,13 +1012,13 @@ public class MstController {
             }
             if(rtn == "0") {
                 rtnMsg = "정상 처리되었습니다.";
-                db1TransactionManager.commit(status);
+                secondaryTransactionManager.commit(status);
             } else {
                 rtnMsg = "비정상 처리되었습니다.";
-                db1TransactionManager.rollback(status);
+                secondaryTransactionManager.rollback(status);
             }
         } catch (Exception e) {
-            db1TransactionManager.rollback(status);
+            secondaryTransactionManager.rollback(status);
             rtn = "3";
             if (e.getCause() instanceof SQLException sqlException) {
                 rtnMsg = "처리실패 : " + sqlException.getMessage();  // Get the specific error message from SQLException
@@ -1110,7 +1110,7 @@ public class MstController {
         DefaultTransactionDefinition def = new DefaultTransactionDefinition();
         def.setName("SomeTxName");
         def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
-        TransactionStatus status = db1TransactionManager.getTransaction(def);
+        TransactionStatus status = secondaryTransactionManager.getTransaction(def);
         // 트랜잭션 정의 끝
 
 
@@ -1161,13 +1161,13 @@ public class MstController {
             }
             if(rtn == "0") {
                 rtnMsg = "정상 처리되었습니다.";
-                db1TransactionManager.commit(status);
+                secondaryTransactionManager.commit(status);
             } else {
                 rtnMsg = "비정상 처리되었습니다.";
-                db1TransactionManager.rollback(status);
+                secondaryTransactionManager.rollback(status);
             }
         } catch (Exception e) {
-            db1TransactionManager.rollback(status);
+            secondaryTransactionManager.rollback(status);
             rtn = "3";
             if (e.getCause() instanceof SQLException sqlException) {
                 rtnMsg = "처리실패 : " + sqlException.getMessage();  // Get the specific error message from SQLException
@@ -1192,7 +1192,7 @@ public class MstController {
         DefaultTransactionDefinition def = new DefaultTransactionDefinition();
         def.setName("SomeTxName");
         def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
-        TransactionStatus status = db1TransactionManager.getTransaction(def);
+        TransactionStatus status = secondaryTransactionManager.getTransaction(def);
         // 트랜잭션 정의 끝
 
 
@@ -1242,13 +1242,13 @@ public class MstController {
             }
             if(rtn == "0") {
                 rtnMsg = "정상 처리되었습니다.";
-                db1TransactionManager.commit(status);
+                secondaryTransactionManager.commit(status);
             } else {
                 rtnMsg = "비정상 처리되었습니다.";
-                db1TransactionManager.rollback(status);
+                secondaryTransactionManager.rollback(status);
             }
         } catch (Exception e) {
-            db1TransactionManager.rollback(status);
+            secondaryTransactionManager.rollback(status);
             rtn = "3";
             if (e.getCause() instanceof SQLException sqlException) {
                 rtnMsg = "처리실패 : " + sqlException.getMessage();  // Get the specific error message from SQLException
@@ -1308,7 +1308,7 @@ public class MstController {
         DefaultTransactionDefinition def = new DefaultTransactionDefinition();
         def.setName("SomeTxName");
         def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
-        TransactionStatus status = db1TransactionManager.getTransaction(def);
+        TransactionStatus status = secondaryTransactionManager.getTransaction(def);
         // 트랜잭션 정의 끝
 
 
@@ -1358,13 +1358,13 @@ public class MstController {
             }
             if(rtn == "0") {
                 rtnMsg = "정상 처리되었습니다.";
-                db1TransactionManager.commit(status);
+                secondaryTransactionManager.commit(status);
             } else {
                 rtnMsg = "비정상 처리되었습니다.";
-                db1TransactionManager.rollback(status);
+                secondaryTransactionManager.rollback(status);
             }
         } catch (Exception e) {
-            db1TransactionManager.rollback(status);
+            secondaryTransactionManager.rollback(status);
             rtn = "3";
             if (e.getCause() instanceof SQLException sqlException) {
                 rtnMsg = "처리실패 : " + sqlException.getMessage();  // Get the specific error message from SQLException
@@ -1379,245 +1379,6 @@ public class MstController {
         return jsonDataRtn;
     }
 
-    /* *******************************************************************************
-     ** 공통코드 처리부분 부분
-     ** ******************************************************************************* */
-    @PostMapping("/mst5090_list")
-    public String mst5090_list(HttpServletRequest request, @RequestHeader("Authorization") String token) throws IOException {
-        System.out.println("mst5090_list.........");
-        Object result;
 
-        String jsonDataRtn = "";
-        RequestUtil requestUtil = new RequestUtil();
-        JsonUtils jsonUtils = new JsonUtils();
-
-        String jsonData = requestUtil.getBody(request);
-
-        Map<String, Object> reqParam = new HashMap<String, Object>();
-        if (!jsonData.isEmpty()) {
-            reqParam = jsonUtils.jsonStringToMap(jsonData);
-        }
-        try {
-            result = mstService.selectQryList("mst5090_list", reqParam);
-
-            Map<String, Object> jsonList = new HashMap<>();
-            jsonList.put("data", result);
-
-            jsonDataRtn = jsonUtils.getToJson(jsonList);
-            jsonDataRtn = jsonDataRtn.replaceAll("null", "\"\"");
-            LOGGER.info("-------------------" + jsonDataRtn);
-
-        } catch (Exception e) {
-            LOGGER.info("Exception : " + e.getMessage());
-            e.printStackTrace();
-
-        }
-        return jsonDataRtn;
-    }
-
-    @PostMapping("/mst5090_select")
-    public String mst5090_select(HttpServletRequest request, @RequestHeader("Authorization") String token) throws IOException {
-        System.out.println("mst5090_select.........");
-        Object result;
-
-        String jsonDataRtn = "";
-        RequestUtil requestUtil = new RequestUtil();
-        JsonUtils jsonUtils = new JsonUtils();
-
-        String jsonData = requestUtil.getBody(request);
-
-        Map<String, Object> reqParam = new HashMap<String, Object>();
-        if (!jsonData.isEmpty()) {
-            reqParam = jsonUtils.jsonStringToMap(jsonData);
-        }
-        try {
-            System.out.println("param ==> " + reqParam);
-            result = mstService.selectQryList("mst5090_select", reqParam);
-
-            Map<String, Object> jsonList = new HashMap<>();
-            jsonList.put("data", result);
-
-            jsonDataRtn = jsonUtils.getToJson(jsonList);
-            jsonDataRtn = jsonDataRtn.replaceAll("null", "\"\"");
-            LOGGER.info("-------------------" + jsonDataRtn);
-
-        } catch (Exception e) {
-            LOGGER.info("Exception : " + e.getMessage());
-            e.printStackTrace();
-
-        }
-        System.out.println("===>> " + jsonDataRtn);
-        return jsonDataRtn;
-    }
-
-    @PostMapping("/mst5090_group_save")
-    public String mst5090_group_save(HttpServletRequest request, @RequestHeader("Authorization") String token) throws Exception {
-        System.out.println("=====>> mst5090_group_save ");
-
-        String accessToken = token.substring(7);
-        Authentication userInfo = jwtTokenProvider.getAuthentication(accessToken);
-
-        // 트랜잭션 정의
-        DefaultTransactionDefinition def = new DefaultTransactionDefinition();
-        def.setName("SomeTxName");
-        def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
-        TransactionStatus status = db1TransactionManager.getTransaction(def);
-        // 트랜잭션 정의 끝
-
-
-        String jsonDataRtn = "";
-        String rtn = "0";
-        String rtnMsg = "";
-        List<?> divde = null;
-        Map<String, Object> map = new HashMap();
-        JsonUtils jsonUtil = new JsonUtils();
-        DataRequestUtil reqUtil = new DataRequestUtil();
-
-        String jsonData = reqUtil.getBody(request);
-        try {
-            Map<String, Object> mapDivde = jsonUtil.jsonStringToMap(jsonData);
-            Map divde_N1 = (Map) mapDivde.get("no1");
-            if (divde_N1 != null) {
-                List divde_I = (List) divde_N1.get("I");
-                List divde_U = (List) divde_N1.get("U");
-                List divde_D = (List) divde_N1.get("D");
-                int divCnt = divde_I.size() + divde_U.size() + divde_D.size();
-                if (!divde_I.isEmpty()) {
-                    Map param = new HashMap();
-                    param.put("list1", divde_I);
-                    param.put("userId", userInfo.getName());
-                    int rtnI = mstService.insertQry("mst5090_group_insert", param);
-                    if(rtnI > 0)  { if(rtn =="0") {rtn = "0";} else {rtn = "1"; }} else { rtn = "1"; }
-                    System.out.println("== I =>> " + rtnI + " === " + rtn);
-                    divde = divde_I;
-                }
-
-                if (!divde_U.isEmpty()) {
-                    Map param = new HashMap();
-                    param.put("list1", divde_U);
-                    param.put("userId", userInfo.getName());
-                    int rtnU = mstService.updateQry("mst5090_group_update", param);
-                    rtnU = mstService.updateQry("mst5090_group_all_update", param);
-                    if(rtnU > 0)  { if(rtn =="0") {rtn = "0";} else {rtn = "1"; }} else { rtn = "1"; }
-                    System.out.println("== U =>> " + rtnU + " === " + rtn);
-                    divde = divde_U;
-                }
-
-                if (!divde_D.isEmpty()) {
-                    Map param = new HashMap();
-                    param.put("list1", divde_D);
-                    param.put("userId", userInfo.getName());
-                    int rtnD = mstService.deleteQry("mst5090_group_delete", param);
-                    if(rtnD > 0)  { if(rtn =="0") {rtn = "0";} else {rtn = "1"; }} else { rtn = "1"; }
-                    System.out.println("== D =>> " + rtnD + " === " + rtn);
-                    divde = divde_D;
-                }
-            }
-            if(rtn == "0") {
-                rtnMsg = "정상 처리되었습니다.";
-                db1TransactionManager.commit(status);
-            } else {
-                rtnMsg = "비정상 처리되었습니다.";
-                db1TransactionManager.rollback(status);
-            }
-        } catch (Exception e) {
-            db1TransactionManager.rollback(status);
-            rtn = "3";
-            if (e.getCause() instanceof SQLException sqlException) {
-                rtnMsg = "처리실패 : " +  sqlException.getMessage();  // Get the specific error message from SQLException
-            } else {
-                rtnMsg = "예상치 못한 오류가 발생했습니다.";
-            }
-        }
-        map.put("rtn", rtn);
-        map.put("rtnMsg", rtnMsg);
-        map.put("data", divde);
-        jsonDataRtn = jsonUtil.getToJson(map).replaceAll("null", "\"\"");
-        return jsonDataRtn;
-    }
-
-    @PostMapping("/mst5090_save")
-    public String mst5090_save(HttpServletRequest request, @RequestHeader("Authorization") String token) throws Exception {
-
-        String accessToken = token.substring(7);
-        Authentication userInfo = jwtTokenProvider.getAuthentication(accessToken);
-
-        // 트랜잭션 정의
-        DefaultTransactionDefinition def = new DefaultTransactionDefinition();
-        def.setName("SomeTxName");
-        def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
-        TransactionStatus status = db1TransactionManager.getTransaction(def);
-        // 트랜잭션 정의 끝
-
-
-        String jsonDataRtn = "";
-        String rtn = "0";
-        String rtnMsg = "";
-        List<?> divde = null;
-        Map<String, Object> map = new HashMap();
-        JsonUtils jsonUtil = new JsonUtils();
-        DataRequestUtil reqUtil = new DataRequestUtil();
-
-        String jsonData = reqUtil.getBody(request);
-        try {
-            Map<String, Object> mapDivde = jsonUtil.jsonStringToMap(jsonData);
-            Map divde_N1 = (Map) mapDivde.get("no1");
-            if (divde_N1 != null) {
-                List divde_I = (List) divde_N1.get("I");
-                List divde_U = (List) divde_N1.get("U");
-                List divde_D = (List) divde_N1.get("D");
-                int divCnt = divde_I.size() + divde_U.size() + divde_D.size();
-                if (!divde_I.isEmpty()) {
-                    Map param = new HashMap();
-                    param.put("list1", divde_I);
-                    param.put("userId", userInfo.getName());
-                    int rtnI = mstService.insertQry("mst5090_insert", param);
-                    if(rtnI > 0)  { if(rtn =="0") {rtn = "0";} else {rtn = "1"; }} else { rtn = "1"; }
-                    System.out.println("== I =>> " + rtnI + " === " + rtn);
-                    divde = divde_I;
-                }
-
-                if (!divde_U.isEmpty()) {
-                    Map param = new HashMap();
-                    param.put("list1", divde_U);
-                    param.put("userId", userInfo.getName());
-                    int rtnU = mstService.updateQry("mst5090_update", param);
-                    if(rtnU > 0)  { if(rtn =="0") {rtn = "0";} else {rtn = "1"; }} else { rtn = "1"; }
-                    System.out.println("== U =>> " + rtnU + " === " + rtn);
-                    divde = divde_U;
-                }
-
-                if (!divde_D.isEmpty()) {
-                    Map param = new HashMap();
-                    param.put("list1", divde_D);
-                    param.put("userId", userInfo.getName());
-                    int rtnD = mstService.deleteQry("mst5090_delete", param);
-                    if(rtnD > 0)  { if(rtn =="0") {rtn = "0";} else {rtn = "1"; }} else { rtn = "1"; }
-                    System.out.println("== D =>> " + rtnD + " === " + rtn);
-                    divde = divde_D;
-                }
-            }
-            if(rtn == "0") {
-                rtnMsg = "정상 처리되었습니다.";
-                db1TransactionManager.commit(status);
-            } else {
-                rtnMsg = "비정상 처리되었습니다.";
-                db1TransactionManager.rollback(status);
-            }
-        } catch (Exception e) {
-            db1TransactionManager.rollback(status);
-            rtn = "3";
-            if (e.getCause() instanceof SQLException sqlException) {
-                rtnMsg = "처리실패 : " + sqlException.getMessage();  // Get the specific error message from SQLException
-            } else {
-                rtnMsg = "예상치 못한 오류가 발생했습니다.";
-            }
-        }
-        map.put("rtn", rtn);
-        map.put("rtnMsg", rtnMsg);
-        map.put("data", divde);
-        jsonDataRtn = jsonUtil.getToJson(map).replaceAll("null", "\"\"");
-        return jsonDataRtn;
-    }
 
 }

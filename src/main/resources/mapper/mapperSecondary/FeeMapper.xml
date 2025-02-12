@@ -520,4 +520,261 @@
         GROUP BY ft.PROD_CD, ft.AGENT_CD, ft.PROC_MONTH
     </select>
 
+    <!-- ###  인세audtp(국내)    ################################ -->
+    <select id="fee4010_month_list" resultType="java.util.HashMap">
+        SELECT    fo.PROC_MONTH            as  valueCd
+		        , CONCAT(fo.PROC_MONTH, '월 (', count(fo.PROC_MONTH), ')')	as	valueNm
+          FROM SFEESOTB fo
+          left outer join MPRODTB mp ON mp.PROD_CD = fo.PROD_CD
+        WHERE fo.PROC_YEAR = #{paramYear }
+          AND mp.PROD_CL = '1'     -- 국내
+        GROUP BY fo.PROC_MONTH
+    </select>
+
+    <select id="fee4010_list" resultType="java.util.HashMap">
+        set @st_amt := 0, @wp_amt := 0, @sot_amt := 0, @sj_amt := 0, @sw_amt := 0;
+
+        DROP TEMPORARY TABLE if exists TMP_YUL_TB;
+
+        CREATE TEMPORARY TABLE IF NOT EXISTS TMP_YUL_TB
+
+            SELECT    tm1.agent_cd      as  agent_cd
+                    , tm1.prod_cd       as  prod_cd
+                    , sum(tm1.s_amt)    as  s_amt
+                    , sum(tm1.o_amt)    as  o_amt
+                    , sum(tm1.j_amt)    as  j_amt
+                    , sum(tm1.p_amt)    as  p_amt     -- 기간내 중간정산액
+                FROM (
+                        SELECT   AGENT_CD				as	agent_cd
+                                , PROD_CD				as	prod_cd
+                                , sum(IFNULL(s_amt, 0))  as  s_amt
+                                , 0                      as  o_amt
+                                , 0                      as  j_amt
+                                , 0                      as  p_amt
+                                FROM SFEESTTB
+                                where proc_year = #{paramYear } AND proc_month <![CDATA[ <= ]]> #{paramMonth }
+                                group by agent_cd, PROD_CD
+                    UNION ALL
+                        SELECT   agent_cd
+                                , PROD_CD
+                                , 0                      as  s_amt
+                                , sum(IFNULL(o_amt, 0))  as  o_amt
+                                , sum(IFNULL(j_amt, 0))  as  j_amt
+                                , 0                      as  p_amt
+                            FROM SFEESTTB
+                            where proc_year = #{paramYear } AND proc_month <![CDATA[ < ]]> #{paramMonth }
+                            group by agent_cd, PROD_CD
+                    UNION ALL
+                        SELECT   agent_cd
+                                , PROD_CD
+                                , 0                      as  s_amt
+                                , 0                      as  o_amt
+                                , 0                      as  j_amt
+                                , sum(IFNULL(p_amt, 0))  as  p_amt
+                            FROM SFEESWTB
+                            where CONCAT(proc_year, proc_month) <![CDATA[ >= ]]> CONCAT(#{paramYear },'01')  and  CONCAT(proc_year, proc_month) <![CDATA[ < ]]> CONCAT(#{paramYear }, #{paramMonth })
+                            group by agent_cd, PROD_CD
+                    ) tm1
+                    group by tm1.agent_cd, tm1.prod_cd;
+
+        SELECT    fo.proc_year        as  procYear
+                , fo.proc_month       as  procMonth
+                , fo.prod_cd          as  prodCd
+                , mp.prod_nm         as  prodNm
+                , fo.agent_cd         as  agentCd
+                , ag.AGENT_NM        as  agentNm        -- 작가
+                , fo.comp_sym         as  compSym
+                , fo.comp_eym         as  compEym
+                , fo.s_price          as  sPrice         -- 정가
+                , fo.it_qty           as  itQty          -- 입고수량
+                , fo.ot_qty           as  otQty          -- 누적수량(출고)
+                , fo.ow_qty           as  owQty          -- 정산수량(출고)
+                , fo.owo_qty          as  owoQty         -- 이월미정산수량(출고)
+                , fo.pm_qty           as  pmQty          -- 홍보수량(출고)
+                , fo.o_qty            as  oQty           -- 판매부수(출고)
+
+                , fo.b_q5             as  bQ5
+                , fo.b_q4             as  bQ4
+                , fo.b_q3             as  bQ3
+                , fo.b_q2             as  bQ2
+                , fo.b_q1             as  bQ1            -- 기준량(기준치 1단계)
+
+                , fo.b_y5             as  bY5
+                , fo.b_y4             as  bY4
+                , fo.b_y3             as  bY3
+                , fo.b_y2             as  bY2
+                , fo.b_y1             as  bY1            -- %(기준치 1단계)
+
+                , fo.o_q5             as  oQ5
+                , fo.o_q4             as  oQ4
+                , fo.o_q3             as  oQ3
+                , fo.o_q2             as  oQ2
+                , fo.o_q1             as  oQ1            -- 수량(정산자료 1단계)
+
+                , fo.otot_qty         as  ototQty           -- 정산수량 합계
+
+                , fo.o_amt5           as  oAmt5
+                , fo.o_amt4           as  oAmt4
+                , fo.o_amt3           as  oAmt3
+                , fo.o_amt2           as  oAmt2
+                , fo.o_amt1           as  oAmt1          -- 정산액(정산자료 1단계)
+
+                , fo.otot_amt         as  ototAmt           -- 정산금액 합계
+
+                , @wp_amt   := IFNULL(tmp.p_amt, 0)                                                     as  dptAmt     -- 중도 정산액
+                , @sw_amt   := IFNULL(tmp.s_amt, 0) - (IFNULL(tmp.o_amt, 0)  -  IFNULL(tmp.j_amt, 0))   as  swAmt      -- 선인세 잔액 계산 (잔액 = 선인세 - 누작지급인세)
+                , @st_amt   := if(@sw_amt <![CDATA[ > ]]> 0, @sw_amt, 0)                                as  stAmt      -- 선인세 잔액(기지급금)
+                , @sot_amt  := IFNULL(fo.otot_amt, 0) + IFNULL(fo.etot_amt, 0) - @wp_amt                as  sotAmt     -- 지급정산 인세
+                , @sj_amt   := @st_amt - @sot_amt                                                       as  sjjAmt     -- 선인세 잔액 계산 (잔액 = 선인세 - 누작지급인세)
+                , if(@sj_amt <![CDATA[ > ]]> 0, @sj_amt, 0)                                             as  sjAmt      -- 선인세 잔액(기지급잔액)
+                , if(@sj_amt <![CDATA[ > ]]> 0, 0, if(@st_amt <![CDATA[ > ]]> 0, @sot_amt - @st_amt, @sot_amt)) as  jAmt       -- 지급액
+            FROM SFEESOTB fo
+                left outer join TMP_YUL_TB tmp ON tmp.agent_cd = fo.agent_cd AND tmp.prod_cd = fo.prod_cd
+                left outer join MPRODTB mp ON mp.PROD_CD = fo.prod_cd
+                -- 공통코드 (에이젠시)
+                left outer join MAGENTTB ag ON ag.AGENT_CD = fo.AGENT_CD
+
+            WHERE CONCAT(fo.proc_year, fo.proc_month) = CONCAT(#{paramYear }, #{paramMonth })
+                 AND mp.PROD_CL   = '1'              -- 국내
+                <if test='paramValue != null and paramValue != ""'>
+                    AND ( mp.PROD_NM LIKE CONCAT( '%', #{paramValue }, '%' )
+                    OR  fo.PROD_CD LIKE CONCAT( '%', #{paramValue }, '%')
+                    OR  ag.AGENT_NM LIKE CONCAT( '%', #{paramValue }, '%')
+                    OR  fo.AGENT_CD LIKE CONCAT( '%', #{paramValue }, '%')
+                    )
+                </if>
+            ORDER BY fo.PROD_CD
+    </select>
+
+    <!-- ###  인세audtp(국외)    ################################ -->
+    <select id="fee5010_month_list" resultType="java.util.HashMap">
+        SELECT    fo.PROC_MONTH            as  valueCd
+		        , CONCAT(fo.PROC_MONTH, '월 (', count(fo.PROC_MONTH), ')')	as	valueNm
+          FROM SFEESOTB fo
+          left outer join MPRODTB mp ON mp.PROD_CD = fo.PROD_CD
+        WHERE fo.PROC_YEAR = #{paramYear }
+          AND mp.PROD_CL = '2'     -- 국내
+        GROUP BY fo.PROC_MONTH
+    </select>
+
+    <select id="fee5010_list" resultType="java.util.HashMap">
+        set @st_amt := 0, @wp_amt := 0, @sot_amt := 0, @sj_amt := 0, @sw_amt := 0;
+
+        DROP TEMPORARY TABLE if exists TMP_YUL_TB;
+
+        CREATE TEMPORARY TABLE IF NOT EXISTS TMP_YUL_TB
+
+            SELECT    tm1.agent_cd      as  agent_cd
+                    , tm1.prod_cd       as  prod_cd
+                    , sum(tm1.s_amt)    as  s_amt       -- 선인세집계
+                    , sum(tm1.d_amt)    as  d_amt       -- 선인세(소멸액) 집계
+                    , sum(tm1.o_amt)    as  o_amt       -- 정산인세집계
+                    , sum(tm1.j_amt)    as  j_amt       -- 정산지급액 집계
+                    , sum(tm1.p_amt)    as  p_amt       -- 기간내 중간정산액
+                FROM (
+                        SELECT   AGENT_CD				as	agent_cd
+                                , PROD_CD				as	prod_cd
+                                , sum(IFNULL(s_amt, 0))  as  s_amt
+                                , 0                      as  d_amt
+                                , 0                      as  o_amt
+                                , 0                      as  j_amt
+                                , 0                      as  p_amt
+                                FROM SFEESTTB
+                                where proc_year = #{paramYear } AND proc_month <![CDATA[ <= ]]> #{paramMonth }
+                                group by agent_cd, PROD_CD
+                    UNION ALL
+                        SELECT   agent_cd
+                                , PROD_CD
+                                , 0                      as  s_amt
+                                , 0                      as  d_amt
+                                , sum(IFNULL(o_amt, 0))  as  o_amt
+                                , sum(IFNULL(j_amt, 0))  as  j_amt
+                                , 0                      as  p_amt
+                            FROM SFEESTTB
+                            where proc_year = #{paramYear } AND proc_month <![CDATA[ < ]]> #{paramMonth }
+                            group by agent_cd, PROD_CD
+                    UNION ALL
+                        SELECT   agent_cd
+                                , PROD_CD
+                                , 0                      as  s_amt
+                                , sum(IFNULL(d_amt, 0))  as  d_amt
+                                , 0                      as  o_amt
+                                , 0                      as  j_amt
+                                , sum(IFNULL(p_amt, 0))  as  p_amt
+                            FROM SFEESWTB
+                            where CONCAT(proc_year, proc_month) <![CDATA[ >= ]]> CONCAT(#{paramYear },'01')  and  CONCAT(proc_year, proc_month) <![CDATA[ < ]]> CONCAT(#{paramYear }, #{paramMonth })
+                            group by agent_cd, PROD_CD
+                    ) tm1
+                    group by tm1.agent_cd, tm1.prod_cd;
+
+        SELECT    fo.proc_year        as  procYear
+                , fo.proc_month       as  procMonth
+                , fo.prod_cd          as  prodCd
+                , mp.prod_nm         as  prodNm
+                , fo.agent_cd         as  agentCd
+                , ag.AGENT_NM        as  agentNm        -- 작가
+                , fo.comp_sym         as  compSym
+                , fo.comp_eym         as  compEym
+                , fo.s_price          as  sPrice         -- 정가
+                , fo.it_qty           as  itQty          -- 입고수량
+                , fo.ot_qty           as  otQty          -- 누적수량(출고)
+                , fo.ow_qty           as  owQty          -- 정산수량(출고)
+                , fo.owo_qty          as  owoQty         -- 이월미정산수량(출고)
+                , fo.pm_qty           as  pmQty          -- 홍보수량(출고)
+                , fo.o_qty            as  oQty           -- 판매부수(출고)
+
+                , fo.b_q5             as  bQ5
+                , fo.b_q4             as  bQ4
+                , fo.b_q3             as  bQ3
+                , fo.b_q2             as  bQ2
+                , fo.b_q1             as  bQ1            -- 기준량(기준치 1단계)
+
+                , fo.b_y5             as  bY5
+                , fo.b_y4             as  bY4
+                , fo.b_y3             as  bY3
+                , fo.b_y2             as  bY2
+                , fo.b_y1             as  bY1            -- %(기준치 1단계)
+
+                , fo.o_q5             as  oQ5
+                , fo.o_q4             as  oQ4
+                , fo.o_q3             as  oQ3
+                , fo.o_q2             as  oQ2
+                , fo.o_q1             as  oQ1            -- 수량(정산자료 1단계)
+
+                , fo.otot_qty         as  ototQty           -- 정산수량 합계
+
+                , fo.o_amt5           as  oAmt5
+                , fo.o_amt4           as  oAmt4
+                , fo.o_amt3           as  oAmt3
+                , fo.o_amt2           as  oAmt2
+                , fo.o_amt1           as  oAmt1          -- 정산액(정산자료 1단계)
+
+                , fo.otot_amt         as  ototAmt           -- 정산금액 합계
+
+                , fo.etot_amt                                                                           as  detAmt     -- 당월 전자책 인세
+                , @wp_amt   := IFNULL(tmp.p_amt, 0)                                                     as  dptAmt     -- 중도 정산액
+                , @sw_amt   := (IFNULL(tmp.s_amt, 0) - IFNULL(tmp.d_amt, 0)) - (IFNULL(tmp.o_amt, 0)  -  IFNULL(tmp.j_amt, 0))   as  swAmt      -- 선인세 잔액 계산 (잔액 = 선인세 - 누작지급인세)
+                , @st_amt   := if(@sw_amt <![CDATA[ > ]]> 0, @sw_amt, 0)                                as  stAmt      -- 선인세 잔액(기지급금)
+                , @sot_amt  := IFNULL(fo.otot_amt, 0) + IFNULL(fo.etot_amt, 0) - @wp_amt                as  sotAmt     -- 지급정산 인세
+                , @sj_amt   := @st_amt - @sot_amt                                                       as  sjjAmt     -- 선인세 잔액 계산 (잔액 = 선인세 - 누작지급인세)
+                , if(@sj_amt <![CDATA[ > ]]> 0, @sj_amt, 0)                                                     as  sjAmt      -- 선인세 잔액(기지급잔액)
+                , if(@sj_amt <![CDATA[ > ]]> 0, 0, if(@st_amt <![CDATA[ > ]]> 0, @sot_amt - @st_amt, @sot_amt)) as  jAmt       -- 지급액
+            FROM SFEESOTB fo
+                left outer join TMP_YUL_TB tmp ON tmp.agent_cd = fo.agent_cd AND tmp.prod_cd = fo.prod_cd
+                left outer join MPRODTB mp ON mp.PROD_CD = fo.prod_cd
+                -- 공통코드 (에이젠시)
+                left outer join MAGENTTB ag ON ag.AGENT_CD = fo.AGENT_CD
+
+            WHERE CONCAT(fo.proc_year, fo.proc_month) = CONCAT(#{paramYear }, #{paramMonth })
+                 AND mp.PROD_CL   = '2'              -- 국내
+                <if test='paramValue != null and paramValue != ""'>
+                    AND ( mp.PROD_NM LIKE CONCAT( '%', #{paramValue }, '%' )
+                    OR  fo.PROD_CD LIKE CONCAT( '%', #{paramValue }, '%')
+                    OR  ag.AGENT_NM LIKE CONCAT( '%', #{paramValue }, '%')
+                    OR  fo.AGENT_CD LIKE CONCAT( '%', #{paramValue }, '%')
+                    )
+                </if>
+            ORDER BY fo.PROD_CD
+    </select>
+
 </mapper>

@@ -24,10 +24,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.ObjectUtils;
-import org.springframework.web.bind.annotation.CrossOrigin;
 
 import java.util.HashMap;
-import java.util.concurrent.TimeUnit;
 
 @Service
 @Transactional
@@ -40,7 +38,6 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthenticationManagerBuilder authenticationManagerBuilder;
-    private final RedisTemplate redisTemplate;
     private static final Logger LOGGER = LoggerFactory.getLogger(AuxController.class);
 
     public final static long TOKEN_EXPIRATION_TIME = 1000 * 60 * 60 * 5; // 5시간
@@ -97,9 +94,12 @@ public class AuthServiceImpl implements AuthService {
 
             int tokenSave = authMapper.tokenSave(userId, accessToken, refreshToken);
 
-            // 4. RefreshToken Redis 저장 (expirationTime 설정을 통해 자동 삭제 처리)
-            //redisTemplate.opsForValue()
-            //       .set("RT:" + authentication.getName(), tokenInfo.getRefreshToken(), tokenInfo.getRefreshTokenExpirationTime(), TimeUnit.MILLISECONDS);
+//            String dbName = "db_sej";
+
+            // 동적 데이터소스 설정
+//            DynamicDataSourceContextHolder.setDataSource(dbName);
+//            DynamicRoutingDataSource.setDatabase(dbName);
+//            TransactionSynchronizationManager.clearSynchronization();
 
             return response.success(tokenInfo, "로그인에 성공했습니다.", HttpStatus.OK);
         } catch (AuthenticationException e) {

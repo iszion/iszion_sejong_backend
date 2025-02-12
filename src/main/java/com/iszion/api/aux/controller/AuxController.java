@@ -47,8 +47,8 @@ public class AuxController {
 //    private final PlatformTransactionManager transactionManager;  // 트랜잭션 매니저
 
 
-    @Qualifier("db1TransactionManager")  // Use @Qualifier to inject the specific transaction manager for db1
-    private final PlatformTransactionManager db1TransactionManager;
+    @Qualifier("primaryTransactionManager")  // Use @Qualifier to inject the specific transaction manager for primary
+    private final PlatformTransactionManager primaryTransactionManager;
 
 
     @Value("${file.upload.folder}")
@@ -225,7 +225,7 @@ public class AuxController {
         DefaultTransactionDefinition def = new DefaultTransactionDefinition();
         def.setName("SomeTxName");
         def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
-        TransactionStatus status = db1TransactionManager.getTransaction(def);
+        TransactionStatus status = primaryTransactionManager.getTransaction(def);
         // 트랜잭션 정의 끝
 
 
@@ -283,13 +283,13 @@ public class AuxController {
             }
             if(rtn == "0") {
                 rtnMsg = "정상 처리되었습니다.";
-                db1TransactionManager.commit(status);
+                primaryTransactionManager.commit(status);
             } else {
                 rtnMsg = "비정상 처리되었습니다.";
-                db1TransactionManager.rollback(status);
+                primaryTransactionManager.rollback(status);
             }
         } catch (Exception e) {
-            db1TransactionManager.rollback(status);
+            primaryTransactionManager.rollback(status);
             rtn = "3";
             if (e.getCause() instanceof SQLException sqlException) {
                 rtnMsg = "처리실패 : " + sqlException.getMessage();  // Get the specific error message from SQLException
@@ -696,7 +696,7 @@ public class AuxController {
         DefaultTransactionDefinition def = new DefaultTransactionDefinition();
         def.setName("SomeTxName");
         def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
-        TransactionStatus status = db1TransactionManager.getTransaction(def);
+        TransactionStatus status = primaryTransactionManager.getTransaction(def);
         // 트랜잭션 정의 끝
 
 
@@ -746,13 +746,13 @@ public class AuxController {
             }
             if(rtn == "0") {
                 rtnMsg = "정상 처리되었습니다.";
-                db1TransactionManager.commit(status);
+                primaryTransactionManager.commit(status);
             } else {
                 rtnMsg = "비정상 처리되었습니다.";
-                db1TransactionManager.rollback(status);
+                primaryTransactionManager.rollback(status);
             }
         } catch (Exception e) {
-            db1TransactionManager.rollback(status);
+            primaryTransactionManager.rollback(status);
             rtn = "3";
             if (e.getCause() instanceof SQLException sqlException) {
                 rtnMsg = "처리실패 : " + sqlException.getMessage();  // Get the specific error message from SQLException

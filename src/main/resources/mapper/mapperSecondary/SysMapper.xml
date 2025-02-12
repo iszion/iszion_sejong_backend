@@ -49,81 +49,6 @@
           AND ID = #{paramId}
     </select>
 
-    <!--    메뉴 그룹정보  list -->
-    <select id="menu_main_list" resultType="java.util.HashMap">
-        SELECT
-               a.PROG_ID                            as      menu_cd
-             , a.LOCATION                           as      name
-             , a.PROG_NM                            as      label
-             , a.ICON_NM                            as      icon
-             , CONCAT('main_menu_', a.LOCATION)     as      labelExt
-        FROM XPROGTB a
-             left join XGRNTGTB g ON g.USER_ID = #{paramUserId}
-        WHERE 1=1
-          AND a.MENU_FG = 'G'
-          AND (g.GN_MKT = 'Y' AND a.LOCATION = 'mkt'
-            OR g.GN_MST = 'Y' AND a.LOCATION = 'mst'
-            OR g.GN_AUX = 'Y' AND a.LOCATION = 'aux'
-            OR g.GN_SYS = 'Y' AND a.LOCATION = 'sys'
-            OR g.GN_FEE = 'Y' AND a.LOCATION = 'fee'
-            OR g.GN_SAL = 'Y' AND a.LOCATION = 'sal'
-            OR g.GN_COS = 'Y' AND a.LOCATION = 'cos'
-            OR a.LOCATION = 'fav')
-        ORDER BY MENU_SEQ
-
-    </select>
-
-    <select id="user_info" resultType="java.util.HashMap">
-        SELECT
-                 u.USER_ID           as  userId
-             ,   u.USER_NM           as  salesNm
-             ,   u.USER_NMX          as  salesNmx
-             ,   u.EMP_CD            as  empCd
-             ,   g.LEVEL_CD          as  levelCd
-             ,   c3.COMM_NM          as  levelNm
-             ,   u.DEPT_CD           as  deptCd
-             ,   c1.COMM_NM          as  deptNm
-             ,   u.PSTN_CD           as  pstnCd
-             ,   c2.COMM_NM          as  pstnNm
-             ,   s.SALES_CD          as  salesCd
-             ,   u.IMAGE_FILE_NM     as  imageFileNm
-             ,   u.IMAGE_FILE_NM_FULL as  imageFileNmFull
-        FROM XUSERTB u
-                 left join XGRNTGTB g ON g.USER_ID  = u.USER_ID
-                 left join MSALESTB s ON s.EMP_CD  = u.EMP_CD
-                 left join MCOMMTB c1 ON c1.COMM_CD = u.DEPT_CD
-                 left join MCOMMTB c2 ON c2.COMM_CD = u.PSTN_CD
-                 left join MCOMMTB c3 ON c3.COMM_CD = g.LEVEL_CD
-        WHERE 1=1
-          AND u.USER_ID = #{paramUserId}
-
-
-
-    </select>
-
-    <!--    메뉴 그룹>항목정보 list -->
-    <select id="menu_sub_list" resultType="java.util.HashMap">
-        SELECT
-               a.SEQ                                as      id
-             , a.MENU_PARENT                        as      menuParent
-             , a.MENU_ID                            as      menuId
-             , CONCAT('sub_menu_', a.PROG_ID)       as      labelExt
-             , a.PROG_NM                            as      label
-             , a.PROG_ID                            as      progId
-             , a.ICON                               as      icon
-             , a.TYPE                               as      header
-             , CONCAT('/main/', LOWER(a.PROG_ID))     as  url
-             , if(da.prog_id is null, 'N', 'Y')	    as      docAyn
-             , if(db.prog_id is null, 'N', 'Y')	    as      docByn
-        FROM XMENUTB a
-        left join XDOCATB da ON da.PROG_ID = a.PROG_ID
-        left join XDOCBTB db ON db.PROG_ID = a.PROG_ID
-        left join XGRNTPTB gp ON gp.PROG_ID = a.PROG_ID  AND gp.USER_ID = #{paramUserId}
-        WHERE 1=1
-          AND a.LOCATION = #{ paramGroupCd }
-          AND (#{paramUserId} = 'admin' OR (gp.SCR_YN = 'Y' OR a.MENU_PARENT = '#'))
-        ORDER BY a.SEQ
-    </select>
 
     <!--    메뉴 즐겨찾기 list -->
     <select id="menu_fav_list" resultType="java.util.HashMap">
@@ -156,7 +81,7 @@
              , a.VIEW_CNT           as  viewCnt
              , DATE_FORMAT(a.MAKE_DATE, '%Y-%m-%d %H:%i:%s') as makeDate
         FROM XBORDTB a
-            left outer join MCOMMTB as c ON c.COMM_CD = a.DEPT_CD
+            left outer join db_izbook.XCOMMTB as c ON c.COMM_CD = a.DEPT_CD
             , (SELECT @rownum :=0) AS tmp
         where a.DEPT_CD = #{ paramDeptCd }
         <if test='paramSearchValue != null and paramSearchValue != ""'>
@@ -178,7 +103,7 @@
              , DATE_FORMAT(b.MAKE_DATE, '%Y-%m-%d %H:%i:%s') as makeDate
         FROM   XBORDTB b
            -- 부서
-           left outer join MCOMMTB as c ON c.COMM_CD = b.dept_cd
+           left outer join db_izbook.XCOMMTB as c ON c.COMM_CD = b.dept_cd
 
         WHERE b.DEPT_CD = #{paramDeptCd } AND b.BOARD_NO = #{paramBoardNo }
     </select>
@@ -279,176 +204,6 @@
     </insert>
 
 
-    <!--    사원정보 list -->
-    <select id="sys1010_list" resultType="java.util.HashMap">
-        SELECT
-              u.USER_ID         as  userId
-            , u.USER_ID         as  oldUserId
-            , u.USER_NM         as  userNm
-            , u.USER_NMX        as  userNmx
-            , u.EMP_CD          as  empCd
-            , u.DEPT_CD         as  deptCd
-            , c1.COMM_NM 		as	deptNm
-            , u.PSTN_CD         as  pstnCd
-            , c2.COMM_NM 		as	pstnNm
-            , u.TITL_CD         as  titlCd
-            , c3.COMM_NM 		as	titlNm
-            , u.MOBILE          as  mobile
-            , u.EMAIL           as  email
-            , u.IN_DAY          as  inDay
-            , u.OUT_DAY         as  outDay
-            , g.LEVEL_CD        as  levelCd
-            , c4.COMM_NM        as  levelNm
-            , u.EXPLAINS        as  explains
-            , u.IMAGE_FILE_NM   as  imageFileNm
-            , u.IMAGE_FILE_NM_FULL as  imageFileNmFull
-            , u.REG_DATE        as  regDate
-            , u.REG_ID          as  regId
-            , u.UPDATE_DATE     as  updateDate
-            , u.UPDATE_ID       as  updateId
-        FROM XUSERTB u
-            left join XGRNTGTB g ON g.USER_ID = u.USER_ID
-            left join MCOMMTB c1 ON c1.COMM_CD = u.DEPT_CD
-            left join MCOMMTB c2 ON c2.COMM_CD = u.PSTN_CD
-            left join MCOMMTB c3 ON c3.COMM_CD = u.TITL_CD
-            left join MCOMMTB c4 ON c4.COMM_CD = g.LEVEL_CD
-        WHERE u.USER_ID != 'admin'
-          AND u.USE_YN = 'Y'
-        <if test='paramDeptCd != null and paramDeptCd != ""'>
-          AND u.DEPT_CD = #{paramDeptCd}
-        </if>
-        <if test='paramSearchWord != null and paramSearchWord != ""'>
-            AND (   u.USER_NM LIKE CONCAT('%', #{paramSearchWord}, '%')
-                 OR u.USER_NMX LIKE CONCAT('%', #{paramSearchWord}, '%')
-                 OR u.USER_ID LIKE CONCAT('%', #{paramSearchWord}, '%')
-                 OR u.EMP_CD LIKE CONCAT('%', #{paramSearchWord}, '%')
-                )
-        </if>
-        ORDER BY u.DEPT_CD asc, u.PSTN_CD asc, u.TITL_CD
-    </select>
-
-    <!--    사원정보 선택자료 list -->
-    <select id="sys1010_select" resultType="java.util.HashMap">
-        SELECT
-               u.USER_ID         as  userId
-             , u.USER_ID         as  oldUserId
-             , u.USER_NM         as  userNm
-             , u.USER_NMX        as  userNmx
-             , u.EMP_CD          as  empCd
-             , u.DEPT_CD         as  deptCd
-             , c1.COMM_NM 		 as	 deptNm
-             , u.PSTN_CD         as  pstnCd
-             , c2.COMM_NM        as  pstnNm
-             , u.TITL_CD         as  titlCd
-             , c3.COMM_NM        as  titlNm
-             , u.MOBILE          as  mobile
-             , u.EMAIL           as  email
-             , u.IN_DAY          as  inDay
-             , u.OUT_DAY         as  outDay
-             , g.LEVEL_CD        as  levelCd
-             , c4.COMM_NM        as  levelNm
-             , u.EXPLAINS        as  explains
-             , u.REG_DATE        as  regDate
-             , u.REG_ID          as  regId
-             , u.IMAGE_FILE_NM   as  imageFileNm
-             , u.IMAGE_FILE_NM_FULL as  imageFileNmFull
-             , u.UPDATE_DATE     as  updateDate
-             , u.UPDATE_ID       as  updateId
-        FROM XUSERTB u
-             left join XGRNTGTB g ON g.USER_ID = u.USER_ID
-             left join MCOMMTB c1 ON c1.COMM_CD = u.DEPT_CD
-             left join MCOMMTB c2 ON c2.COMM_CD = u.PSTN_CD
-             left join MCOMMTB c3 ON c3.COMM_CD = u.TITL_CD
-             left join MCOMMTB c4 ON c4.COMM_CD = g.LEVEL_CD
-        where u.USER_ID = #{ paramUserId }
-    </select>
-
-    <!--    사원정보 신규등록  -->
-    <insert id="sys1010_insert" parameterType="java.util.Map">
-        <foreach collection="list1" item="item" separator=";">
-            INSERT INTO XUSERTB
-            (
-              USER_ID
-            , PASSWD
-            , USER_NM
-            , USER_NMX
-            , EMP_CD
-            , DEPT_CD
-            , PSTN_CD
-            , TITL_CD
-            , MOBILE
-            , EMAIL
-            , IN_DAY
-            , OUT_DAY
-            , ROLE
-            , EXPLAINS
-            , IMAGE_FILE_NM
-            , IMAGE_FILE_NM_FULL
-            , REG_DATE
-            , REG_ID
-            , UPDATE_DATE
-            , UPDATE_ID
-            ) VALUES (
-              #{item.userId}
-            , #{item.passwd}
-            , #{item.userNm}
-            , #{item.userNmx}
-            , #{item.empCd}
-            , #{item.deptCd}
-            , #{item.pstnCd}
-            , #{item.titlCd}
-            , #{item.mobile}
-            , #{item.email}
-            , #{item.inDay}
-            , #{item.outDay}
-            , #{item.role}
-            , #{item.explains}
-            , #{item.imageFileNm}
-            , #{item.imageFileNmFull}
-            , NOW()
-            , #{userId}
-            , NOW()
-            , #{userId}
-            )
-        </foreach>
-    </insert>
-
-    <!--    사원정보 수정 -->
-    <update id="sys1010_update" parameterType="java.util.Map">
-        <foreach collection="list1" item="item" separator=";">
-            UPDATE XUSERTB
-            SET
-                USER_NMX            =   #{item.userNmx}
-            ,   EXPLAINS            =   #{item.explains}
-            ,   IMAGE_FILE_NM       =   #{item.imageFileNm}
-            ,   IMAGE_FILE_NM_FULL  =   #{item.imageFileNmFull}
-            ,   UPDATE_DATE         =   NOW()
-            ,   UPDATE_ID           =   #{userId}
-
-            WHERE USER_ID   =   #{item.oldUserId}
-        </foreach>
-    </update>
-
-    <!--    사원정보 삭제 -->
-    <delete id="sys1010_delete" parameterType="java.util.Map">
-        <foreach collection="list1" item="item" separator=";">
-            DELETE FROM XUSERTB
-            WHERE USER_ID  	=   #{item.oldUserId }
-        </foreach>
-    </delete>
-
-    <!--    사원정보 수정 -->
-    <update id="sys1010_update_passwordReset" parameterType="java.util.Map">
-        <foreach collection="list1" item="item" separator=";">
-            UPDATE XUSERTB
-                    SET PASSWD      =   #{item.passwd}
-                    ,   UPDATE_DATE =   NOW()
-                    ,   UPDATE_ID   =   #{userId}
-
-            WHERE USER_ID   =   #{item.oldUserId}
-        </foreach>
-    </update>
-
 
     <!--    사용자 권한주기 list    -->
     <select id="sys1110_grntg_list" resultType="java.util.HashMap">
@@ -466,15 +221,16 @@
             , IFNULL(g.GN_AUX,'N')		as	gnAux
             , IFNULL(g.GN_MST,'N')		as	gnMst
             , IFNULL(g.GN_SYS,'N')		as	gnSys
+            , IFNULL(g.GN_COM,'N')		as	gnCom
             , IFNULL(g.GN_FEE,'N')		as	gnFee
             , IFNULL(g.GN_SAL,'N')		as	gnSal
             , IFNULL(g.GN_COS,'N')		as	gnCos
             , IF(g.USER_ID is null, 'I', 'U')  as  iuD
         FROM XUSERTB u
             left join XGRNTGTB g  ON g.USER_ID  = u.USER_ID
-            left join MCOMMTB  c1 ON c1.comm_cd = u.DEPT_CD
-            left join MCOMMTB  c2 ON c2.comm_cd = u.PSTN_CD
-            left join MCOMMTB  c3 ON c3.comm_cd = g.LEVEL_CD
+            left join db_izbook.XCOMMTB  c1 ON c1.comm_cd = u.DEPT_CD
+            left join db_izbook.XCOMMTB  c2 ON c2.comm_cd = u.PSTN_CD
+            left join db_izbook.XCOMMTB  c3 ON c3.comm_cd = g.LEVEL_CD
         WHERE u.USER_ID != 'admin'
           AND u.USE_YN = 'Y'
             <if test='paramDeptCd != null and paramDeptCd != ""'>
@@ -493,6 +249,7 @@
             (
               USER_ID
             , LEVEL_CD
+            , GN_COM
             , GN_SYS
             , GN_MST
             , GN_AUX
@@ -505,6 +262,7 @@
             ) VALUES (
               #{item.userId}
             , #{item.levelCd}
+            , #{item.gnCom}
             , #{item.gnSys}
             , #{item.gnMst}
             , #{item.gnAux}
@@ -524,6 +282,7 @@
             UPDATE XGRNTGTB
             SET
                     LEVEL_CD        =   #{item.levelCd}
+                ,   GN_COM          =   #{item.gnCom}
                 ,   GN_SYS          =   #{item.gnSys}
                 ,   GN_MST          =   #{item.gnMst}
                 ,   GN_AUX          =   #{item.gnAux}
@@ -648,8 +407,8 @@
             , 'N'               as  targetYn
             , u.USER_ID         as  targetUserId
         FROM XUSERTB u
-            left join MCOMMTB c1 ON c1.COMM_CD = u.DEPT_CD
-            left join MCOMMTB c2 ON c2.COMM_CD = u.PSTN_CD
+            left join db_izbook.XCOMMTB c1 ON c1.COMM_CD = u.DEPT_CD
+            left join db_izbook.XCOMMTB c2 ON c2.COMM_CD = u.PSTN_CD
         WHERE u.USER_ID != 'admin'
           AND u.USE_YN = 'Y'
           AND u.USER_NM LIKE CONCAT( '%', #{paramSearchValue }, '%' )
@@ -666,6 +425,7 @@
             (
             USER_ID
             , LEVEL_CD
+            , GN_COM
             , GN_SYS
             , GN_MST
             , GN_AUX
@@ -679,6 +439,7 @@
             SELECT
               #{item.targetUserId }
             , LEVEL_CD
+            , GN_COM
             , GN_SYS
             , GN_MST
             , GN_AUX
@@ -952,151 +713,6 @@
     </delete>
 
 
-    <!--    프로그램 그룹 list -->
-    <select id="sys5010_group_list" resultType="java.util.HashMap">
-        SELECT
-            a.PROG_ID     as  progId
-             , a.PROG_NM     as  progNm
-             , (SELECT b.PROG_NM FROM XPROGTB b WHERE b.PROG_ID = CONCAT(a.LOCATION, '0000')) as groupNm
-             , a.LOCATION    as  location
-             , a.MENU_FG     as  menuFg
-             , a.MENU_SEQ    as  menuSeq
-             , a.ICON_NM     as  iconNm
-             , a.SCR_YN      as  scrYn
-             , a.NEW_YN      as  newYn
-             , a.DBG_YN      as  dbgYn
-             , a.DEL_YN      as  delYn
-             , a.RPT_YN      as  rptYn
-             , a.EXC_YN      as  excYn
-             , a.LOC_YN      as  locYn
-             , a.APP_YN      as  appYn
-             , a.EXPLAINS    as  explains
-             , a.REG_DATE    as  regDate
-             , a.REG_ID      as  regId
-             , a.UPDATE_DATE as  updateDate
-             , a.UPDATE_ID   as  updateId
-             , a.PROG_ID     as  oldProgId
-        FROM XPROGTB a
-        WHERE 1=1
-          AND MENU_FG   =   'G'
-        ORDER BY MENU_SEQ
-
-    </select>
-
-    <!--    프로그램 그룹선택된 항목 list -->
-    <select id="sys5010_menu_list" resultType="java.util.HashMap">
-        SELECT
-        a.PROG_ID     as  progId
-        , a.PROG_NM     as  progNm
-        , (SELECT b.PROG_NM FROM XPROGTB b WHERE b.PROG_ID = CONCAT(a.LOCATION, '0000')) as groupNm
-        , a.LOCATION    as  location
-        , a.MENU_FG     as  menuFg
-        , a.MENU_SEQ    as  menuSeq
-        , a.ICON_NM     as  iconNm
-        , a.SCR_YN      as  scrYn
-        , a.NEW_YN      as  newYn
-        , a.DBG_YN      as  dbgYn
-        , a.DEL_YN      as  delYn
-        , a.RPT_YN      as  rptYn
-        , a.EXC_YN      as  excYn
-        , a.LOC_YN      as  locYn
-        , a.APP_YN      as  appYn
-        , a.EXPLAINS    as  explains
-        , a.REG_DATE    as  regDate
-        , a.REG_ID      as  regId
-        , a.UPDATE_DATE as  updateDate
-        , a.UPDATE_ID   as  updateId
-        , a.PROG_ID     as  oldProgId
-        FROM XPROGTB a
-        WHERE 1=1
-        <if test='groupCd != null and groupCd != ""'>
-            AND a.LOCATION = #{groupCd}
-        </if>
-
-    </select>
-
-    <!--    그룹명 list select용 -->
-    <select id="prog_group_list" resultType="java.util.HashMap">
-        SELECT
-            p.PROG_NM      as  groupNm
-          , p.LOCATION     as  groupCd
-
-        FROM XPROGTB p
-
-        WHERE p.LOCATION != 'fav'
-        GROUP BY p.LOCATION
-    </select>
-
-    <!--   메뉴얼(관리자용) 프로그램 list -->
-    <select id="sys4010_list" resultType="java.util.HashMap">
-        SELECT
-               a.SEQ                                as      id
-             , a.MENU_PARENT                        as      menuParent
-             , a.MENU_ID                            as      menuId
-             , CONCAT('sub_menu_', a.PROG_ID)       as      labelExt
-             , a.PROG_NM                            as      label
-             , a.PROG_ID                            as      progId
-             , a.ICON                               as      icon
-             , a.TYPE                               as      header
-             , CONCAT('/main/', LOWER(a.PROG_ID))   as      url
-             , if(da.prog_id is null, 'N', 'Y')	    as      docAyn
-             , if(db.prog_id is null, 'N', 'Y')	    as      docByn
-        FROM XMENUTB a
-                 left join XDOCATB da ON da.PROG_ID = a.PROG_ID
-                 left join XDOCBTB db ON db.PROG_ID = a.PROG_ID
-        WHERE 1=1
-          AND a.LOCATION = #{ paramGroupCd }
-        ORDER BY a.SEQ
-    </select>
-
-
-    <select id="sys4010_docA_select" resultType="java.util.HashMap">
-        SELECT
-               a.PROG_ID		    as  progId
-             , a.CONTENTS          	as  contents
-        FROM XDOCATB a
-        WHERE a.PROG_ID = #{ paramProgId }
-    </select>
-
-
-    <!--    메뉴얼(관리자용) 신규저장  -->
-    <insert id="sys4010_docA_insert" parameterType="java.util.Map">
-        <foreach collection="list1" item="item" separator=";">
-            INSERT INTO XDOCATB
-            (
-              PROG_ID
-            , CONTENTS
-            , UPDATE_DATE
-            , UPDATE_ID
-            ) VALUES (
-              #{item.progId}
-            , #{item.contents}
-            , NOW()
-            , #{userId}
-            )
-        </foreach>
-    </insert>
-
-    <!--    메뉴얼(관리자용) 수정  -->
-    <update id="sys4010_docA_update" parameterType="java.util.Map">
-        <foreach collection="list1" item="item" separator=";">
-            UPDATE XDOCATB
-            SET
-                CONTENTS        = #{item.contents}
-            ,   UPDATE_DATE     = NOW()
-            ,   UPDATE_ID       = #{userId}
-
-            WHERE PROG_ID = #{item.progId}
-        </foreach>
-    </update>
-
-    <!--    메뉴얼(관리자용) 삭제  -->
-    <delete id="sys4010_docA_delete" parameterType="java.util.Map">
-        <foreach collection="list1" item="item" separator=";">
-            DELETE FROM XDOCATB
-            WHERE PROG_ID  	=   #{item.progId }
-        </foreach>
-    </delete>
 
 
     <!--   메뉴얼관리(사용자용) 프로그램 list -->
@@ -1249,188 +865,6 @@
     </delete>
 
 
-    <!--    프로그램 신규저장  -->
-    <insert id="sys5010_insert" parameterType="java.util.Map">
-        <foreach collection="list1" item="item" separator=";">
-            INSERT INTO XPROGTB
-            (
-            PROG_ID
-            , PROG_NM
-            , LOCATION
-            , MENU_FG
-            , MENU_SEQ
-            , ICON_NM
-            , SCR_YN
-            , NEW_YN
-            , DBG_YN
-            , DEL_YN
-            , RPT_YN
-            , EXC_YN
-            , LOC_YN
-            , APP_YN
-            , EXPLAINS
-            , REG_DATE
-            , REG_ID
-            , UPDATE_DATE
-            , UPDATE_ID
-            ) VALUES (
-            #{item.progId}
-            , #{item.progNm}
-            , #{item.location}
-            , #{item.menuFg}
-            , #{item.menuSeq}
-            , #{item.iconNm}
-            , #{item.scrYn}
-            , #{item.newYn}
-            , #{item.dbgYn}
-            , #{item.delYn}
-            , #{item.rptYn}
-            , #{item.excYn}
-            , #{item.locYn}
-            , #{item.appYn}
-            , #{item.explains}
-            , NOW()
-            , #{userId}
-            , NOW()
-            , #{userId}
-            )
-        </foreach>
-    </insert>
-
-    <!--    프로그램 수정  -->
-    <update id="sys5010_update" parameterType="java.util.Map">
-        <foreach collection="list1" item="item" separator=";">
-            UPDATE XPROGTB
-            SET
-            PROG_ID         = #{item.progId}
-            ,   PROG_NM         = #{item.progNm}
-            ,   LOCATION        = #{item.location}
-            ,   MENU_FG         = #{item.menuFg}
-            ,   MENU_SEQ        = #{item.menuSeq}
-            ,   ICON_NM         = #{item.iconNm}
-            ,   SCR_YN          = #{item.scrYn}
-            ,   NEW_YN          = #{item.newYn}
-            ,   DBG_YN          = #{item.dbgYn}
-            ,   DEL_YN          = #{item.delYn}
-            ,   RPT_YN          = #{item.rptYn}
-            ,   EXC_YN          = #{item.excYn}
-            ,   LOC_YN          = #{item.locYn}
-            ,   APP_YN          = #{item.appYn}
-            ,   EXPLAINS        = #{item.explains}
-            ,   UPDATE_DATE     = NOW()
-            ,   UPDATE_ID       = #{userId}
-
-            WHERE PROG_ID = #{item.oldProgId}
-        </foreach>
-    </update>
-
-    <!--    프로그램 삭제  -->
-    <delete id="sys5010_delete" parameterType="java.util.Map">
-        <foreach collection="list1" item="item" separator=";">
-            DELETE FROM XPROGTB
-            WHERE PROG_ID  	=   #{item.oldProgId }
-        </foreach>
-    </delete>
-
-    <!--    메뉴설정 프로그램 list -->
-    <select id="sys5020_prog_list" resultType="java.util.HashMap">
-        SELECT
-            LOCATION           as  id
-             ,'#'              as  parent
-             ,0                as  seq
-             ,PROG_NM          as  text
-             ,ICON_NM          as  icon
-             ,'folder'         as  type
-        FROM XPROGTB
-        WHERE MENU_FG = 'G'
-
-        UNION
-
-        SELECT
-            PROG_ID            as  id
-             ,LOCATION         as  parent
-             ,0                as  seq
-             ,PROG_NM          as  text
-             ,ICON_NM          as  icon
-             ,'file'           as  type
-        FROM XPROGTB
-        WHERE MENU_FG = 'M'
-
-    </select>
-
-    <!--    메뉴설정 메뉴정보 list -->
-    <select id="sys5020_menu_list" resultType="java.util.HashMap">
-        SELECT
-            MENU_ID          as  id
-             , MENU_PARENT      as  parent
-             , SEQ              as  seq
-             , PROG_NM          as  text
-             , LOCATION         as  groupCd
-             , PROG_ID          as  progId
-             , ICON             as  icon
-             , STATE_OPENED     as  stateOpened
-             , TYPE             as  type
-
-        FROM XMENUTB
-
-        WHERE 1=1
-          and LOCATION = #{paramSelectedGroup}
-        order by  MENU_PARENT, SEQ
-    </select>
-
-    <!--    메뉴설정 삭제  -->
-    <delete id="sys5020_delete" parameterType="java.util.Map">
-        <foreach collection="list1" item="item" separator=";">
-            DELETE FROM XMENUTB
-            WHERE LOCATION  = #{item.groupCd }
-        </foreach>
-    </delete>
-
-    <!--    메뉴설정 저장  -->
-    <insert id="sys5020_insert" parameterType="java.util.Map">
-        <foreach collection="list1" item="item" separator=";">
-            INSERT INTO XMENUTB    (
-              LOCATION
-            , SEQ
-            , MENU_ID
-            , MENU_PARENT
-            , PROG_NM
-            , PROG_ID
-            , ICON
-            , STATE_OPENED
-            , TYPE
-            , REG_DATE
-            , REG_ID
-            , UPDATE_DATE
-            , UPDATE_ID
-            ) VALUES (
-              #{item.groupCd }
-            , #{item.seq }
-            , #{item.menuId }
-            , #{item.menuParent }
-            , #{item.progNm }
-            , #{item.progId }
-            , #{item.icon }
-            , #{item.stateOpened }
-            , #{item.type }
-            , now()
-            , #{userId}
-            , now()
-            , #{userId}
-            )
-        </foreach>
-    </insert>
-
-    <!--    메뉴설정 선택된 항목 삭제  -->
-    <delete id="sys5020_select_delete" parameterType="java.util.Map">
-        <foreach collection="list1" item="item" separator=";">
-            DELETE FROM XMENUTB
-            WHERE LOCATION  = #{item.location }
-        </foreach>
-    </delete>
-
-
-
     <!--   즐겨찾기 메뉴설정 메뉴정보 list -->
     <select id="sys5030_fav_menu_list" resultType="java.util.HashMap">
         SELECT
@@ -1505,32 +939,5 @@
         </foreach>
     </delete>
 
-    <!--   패스워드 체크부분 -->
-    <!--<select id="passwordCheck" resultType="java.util.HashMap">
-        SELECT
-                if(PASSWD = #{passwd}, 'ture', 'false')
-        FROM XUSERTB
-        WHERE USER_ID = #{paramUserId}
-    </select>-->
-    <select id="passwordCheck" resultType="java.util.HashMap">
-        SELECT
-                USER_NM
-        ,       PASSWD
-        FROM XUSERTB
-        WHERE USER_ID = #{paramUserId}
-    </select>
-
-    <!--    사원정보 수정 -->
-    <update id="passwdUpdate_save" parameterType="java.util.Map">
-        <foreach collection="list1" item="item" separator=";">
-            UPDATE XUSERTB
-            SET
-                PASSWD      =   #{item.passwd}
-            ,   UPDATE_DATE =   NOW()
-            ,   UPDATE_ID   =   #{userId}
-
-            WHERE USER_ID   =   #{item.userId}
-        </foreach>
-    </update>
 
 </mapper>

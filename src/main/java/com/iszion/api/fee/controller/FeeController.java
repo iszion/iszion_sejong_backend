@@ -24,7 +24,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,8 +39,16 @@ public class FeeController {
     private final JwtTokenProvider jwtTokenProvider;
     private final PlatformTransactionManager transactionManager;  // 트랜잭션 매니저
 
-//    @Qualifier("db1TransactionManager")  // Use @Qualifier to inject the specific transaction manager for db1
-//    private final PlatformTransactionManager db1TransactionManager;
+//    @Qualifier("secondaryTransactionManager")  // Use @Qualifier to inject the specific transaction manager for secondary
+//    private final PlatformTransactionManager secondaryTransactionManager;
+
+
+    @Value("${spring.secondary.datasource.url}")
+    private String DB_URL;
+    @Value("${spring.secondary.datasource.username}")
+    private String DB_USERID;
+    @Value("${spring.secondary.datasource.password}")
+    private String DB_PASSWORD;
 
     /* *******************************************************************************
      ** 인세기준정보
@@ -598,6 +606,257 @@ public class FeeController {
         }
         try {
             result = feeService.selectQryList("fee3020_list", reqParam);
+
+            Map<String, Object> jsonList = new HashMap<>();
+            jsonList.put("data", result);
+
+            jsonDataRtn = jsonUtils.getToJson(jsonList);
+            jsonDataRtn = jsonDataRtn.replaceAll("null", "\"\"");
+
+        } catch (Exception e) {
+            LOGGER.info("Exception : " + e.getMessage());
+            e.printStackTrace();
+
+        }
+        return jsonDataRtn;
+    }
+
+
+    /* *******************************************************************************
+     ** 인세계산 작업
+     ** ******************************************************************************* */
+    @PostMapping("/fee2010_procedure")
+    public String fee2010_procedure(HttpServletRequest request, @RequestHeader("Authorization") String token) throws Exception {
+        String accessToken = token.substring(7);
+        Authentication userInfo = jwtTokenProvider.getAuthentication(accessToken);
+        String userId = userInfo.getName();
+
+        RequestUtil reqUtil = new RequestUtil();
+        String jsonData = reqUtil.getBody(request);
+        JsonUtils jsonUtil = new JsonUtils();
+        Map<String, Object> reqParam = jsonUtil.jsonStringToMap(jsonData);
+        String pYear = (String) reqParam.get("paramYear");
+        String pMonthFrom = (String) reqParam.get("paramMonthFrom");
+        String pMonthTo = (String) reqParam.get("paramMonthTo");
+
+        boolean result;
+        try {
+            Connection con = null;
+            CallableStatement cs = null;
+//            String url = "jdbc:log4jdbc:mariadb://hr.energyshop.co.kr:3306/db_dipe?allowMultiQueries=true";
+//            String id = "iszion";
+//            String pw = "iszion1347#*";
+            // 연결
+//            con = DriverManager.getConnection(url, id, pw);
+            con = DriverManager.getConnection(DB_URL, DB_USERID, DB_PASSWORD);
+
+            // 프로시저 호출
+            cs = con.prepareCall("{call PROC_FEES_COMPUTE(?, ?, ?, ?, ?)}");
+
+            // 입력 파라미터 설정
+            cs.setString(1, pYear);
+            cs.setString(2, pMonthFrom);
+            cs.setString(3, pMonthTo);
+            cs.setString(4, userId);
+            // 출력 파라미터 설정
+            cs.registerOutParameter(5, Types.BOOLEAN);
+
+            // 실행
+            cs.execute();
+            // 출력 파라미터 값 가져오기
+            result = cs.getBoolean(5);
+
+            System.out.println("Procedure executed successfully :: " + result);
+
+            cs.close();
+            con.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ("{\"success\":false}");
+        }
+        if(result) {
+            return ("{\"success\":true}");
+        } else {
+            return ("{\"success\":false}");
+        }
+    }
+
+    /* *******************************************************************************
+     ** 인세계산 취소작업
+     ** ******************************************************************************* */
+    @PostMapping("/fee2020_procedure")
+    public String fee2020_procedure(HttpServletRequest request, @RequestHeader("Authorization") String token) throws Exception {
+        String accessToken = token.substring(7);
+        Authentication userInfo = jwtTokenProvider.getAuthentication(accessToken);
+        String userId = userInfo.getName();
+
+        RequestUtil reqUtil = new RequestUtil();
+        String jsonData = reqUtil.getBody(request);
+        JsonUtils jsonUtil = new JsonUtils();
+        Map<String, Object> reqParam = jsonUtil.jsonStringToMap(jsonData);
+        String pYear = (String) reqParam.get("paramYear");
+        String pMonthFrom = (String) reqParam.get("paramMonthFrom");
+        String pMonthTo = (String) reqParam.get("paramMonthTo");
+
+        boolean result;
+        try {
+            Connection con = null;
+            CallableStatement cs = null;
+//            String url = "jdbc:log4jdbc:mariadb://hr.energyshop.co.kr:3306/db_dipe?allowMultiQueries=true";
+//            String id = "iszion";
+//            String pw = "iszion1347#*";
+            // 연결
+//            con = DriverManager.getConnection(url, id, pw);
+            con = DriverManager.getConnection(DB_URL, DB_USERID, DB_PASSWORD);
+
+            // 프로시저 호출
+            cs = con.prepareCall("{call PROC_FEES_CLEAR(?, ?, ?, ?, ?)}");
+
+            // 입력 파라미터 설정
+            cs.setString(1, pYear);
+            cs.setString(2, pMonthFrom);
+            cs.setString(3, pMonthTo);
+            cs.setString(4, userId);
+            // 출력 파라미터 설정
+            cs.registerOutParameter(5, Types.BOOLEAN);
+
+            // 실행
+            cs.execute();
+            // 출력 파라미터 값 가져오기
+            result = cs.getBoolean(5);
+
+            System.out.println("Procedure executed successfully :: " + result);
+
+            cs.close();
+            con.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ("{\"success\":false}");
+        }
+        if(result) {
+            return ("{\"success\":true}");
+        } else {
+            return ("{\"success\":false}");
+        }
+    }
+
+
+    /* *******************************************************************************
+     ** 인세명세 (국내)
+     ** ******************************************************************************* */
+    @PostMapping("/fee4010_month_list")
+    public String fee4010_month_list(HttpServletRequest request, @RequestHeader("Authorization") String token) throws IOException {
+        Object result;
+
+        String jsonDataRtn = "";
+        RequestUtil requestUtil = new RequestUtil();
+        JsonUtils jsonUtils = new JsonUtils();
+
+        String jsonData = requestUtil.getBody(request);
+
+        Map<String, Object> reqParam = new HashMap<String, Object>();
+        if (!jsonData.isEmpty()) {
+            reqParam = jsonUtils.jsonStringToMap(jsonData);
+        }
+        try {
+            result = feeService.selectQryList("fee4010_month_list", reqParam);
+
+            Map<String, Object> jsonList = new HashMap<>();
+            jsonList.put("data", result);
+
+            jsonDataRtn = jsonUtils.getToJson(jsonList);
+            jsonDataRtn = jsonDataRtn.replaceAll("null", "\"\"");
+
+        } catch (Exception e) {
+            LOGGER.info("Exception : " + e.getMessage());
+            e.printStackTrace();
+
+        }
+        return jsonDataRtn;
+    }
+
+    @PostMapping("/fee4010_list")
+    public String fee4010_list(HttpServletRequest request, @RequestHeader("Authorization") String token) throws IOException {
+        Object result;
+
+        String jsonDataRtn = "";
+        RequestUtil requestUtil = new RequestUtil();
+        JsonUtils jsonUtils = new JsonUtils();
+
+        String jsonData = requestUtil.getBody(request);
+
+        Map<String, Object> reqParam = new HashMap<String, Object>();
+        if (!jsonData.isEmpty()) {
+            reqParam = jsonUtils.jsonStringToMap(jsonData);
+        }
+        try {
+            result = feeService.selectQryList("fee4010_list", reqParam);
+
+            Map<String, Object> jsonList = new HashMap<>();
+            jsonList.put("data", result);
+
+            jsonDataRtn = jsonUtils.getToJson(jsonList);
+            jsonDataRtn = jsonDataRtn.replaceAll("null", "\"\"");
+
+        } catch (Exception e) {
+            LOGGER.info("Exception : " + e.getMessage());
+            e.printStackTrace();
+
+        }
+        return jsonDataRtn;
+    }
+
+
+    /* *******************************************************************************
+     ** 인세명세 (국외)
+     ** ******************************************************************************* */
+    @PostMapping("/fee5010_month_list")
+    public String fee5010_month_list(HttpServletRequest request, @RequestHeader("Authorization") String token) throws IOException {
+        Object result;
+
+        String jsonDataRtn = "";
+        RequestUtil requestUtil = new RequestUtil();
+        JsonUtils jsonUtils = new JsonUtils();
+
+        String jsonData = requestUtil.getBody(request);
+
+        Map<String, Object> reqParam = new HashMap<String, Object>();
+        if (!jsonData.isEmpty()) {
+            reqParam = jsonUtils.jsonStringToMap(jsonData);
+        }
+        try {
+            result = feeService.selectQryList("fee5010_month_list", reqParam);
+
+            Map<String, Object> jsonList = new HashMap<>();
+            jsonList.put("data", result);
+
+            jsonDataRtn = jsonUtils.getToJson(jsonList);
+            jsonDataRtn = jsonDataRtn.replaceAll("null", "\"\"");
+
+        } catch (Exception e) {
+            LOGGER.info("Exception : " + e.getMessage());
+            e.printStackTrace();
+
+        }
+        return jsonDataRtn;
+    }
+
+    @PostMapping("/fee5010_list")
+    public String fee5010_list(HttpServletRequest request, @RequestHeader("Authorization") String token) throws IOException {
+        Object result;
+
+        String jsonDataRtn = "";
+        RequestUtil requestUtil = new RequestUtil();
+        JsonUtils jsonUtils = new JsonUtils();
+
+        String jsonData = requestUtil.getBody(request);
+
+        Map<String, Object> reqParam = new HashMap<String, Object>();
+        if (!jsonData.isEmpty()) {
+            reqParam = jsonUtils.jsonStringToMap(jsonData);
+        }
+        try {
+            result = feeService.selectQryList("fee5010_list", reqParam);
 
             Map<String, Object> jsonList = new HashMap<>();
             jsonList.put("data", result);

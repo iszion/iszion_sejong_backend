@@ -2,6 +2,7 @@ package com.iszion.api.fee.dao;
 
 import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -10,7 +11,8 @@ import java.util.List;
 public class FeeDAO {
 
     @Autowired
-    private SqlSessionTemplate sqlSessionTemplate;
+    @Qualifier("secondarySqlSessionTemplate")
+    private SqlSessionTemplate secondarySqlSessionTemplate;
 
     /**
      * 조회 한건
@@ -19,7 +21,7 @@ public class FeeDAO {
      * @exception Exception
      */
     public Object selectQryOne(String queryId,Object searchObj) throws Exception {
-        return sqlSessionTemplate.selectOne(queryId, searchObj);
+        return secondarySqlSessionTemplate.selectOne(queryId, searchObj);
     }
     /**
      * 조회리스트
@@ -28,7 +30,7 @@ public class FeeDAO {
      * @exception Exception
      */
     public List<?> selectQryList(String queryId, Object searchObj) throws Exception {
-        return sqlSessionTemplate.selectList(queryId, searchObj);
+        return secondarySqlSessionTemplate.selectList(queryId, searchObj);
     }
     /**
      * 조회리스트
@@ -37,7 +39,7 @@ public class FeeDAO {
      * @exception Exception
      */
     public Object selectQryListCnt(String queryId,Object searchObj) throws Exception {
-        return sqlSessionTemplate.selectOne(queryId, searchObj);
+        return secondarySqlSessionTemplate.selectOne(queryId, searchObj);
     }
     /**
      * 입력
@@ -46,7 +48,7 @@ public class FeeDAO {
      * @exception Exception
      */
     public int insertQry(String queryId,Object searchObj) throws Exception {
-        return sqlSessionTemplate.insert(queryId, searchObj);
+        return secondarySqlSessionTemplate.insert(queryId, searchObj);
     }
     /**
      * 수정
@@ -55,7 +57,7 @@ public class FeeDAO {
      * @exception Exception
      */
     public int updateQry(String queryId,Object searchObj) throws Exception {
-        return sqlSessionTemplate.update(queryId, searchObj);
+        return secondarySqlSessionTemplate.update(queryId, searchObj);
     }
     /**
      *  삭제
@@ -64,6 +66,6 @@ public class FeeDAO {
      * @exception Exception
      */
     public int deleteQry(String queryId,Object searchObj) throws Exception {
-        return sqlSessionTemplate.delete(queryId, searchObj);
+        return secondarySqlSessionTemplate.delete(queryId, searchObj);
     }
 }

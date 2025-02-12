@@ -511,8 +511,7 @@ public class SalController {
             reqParam = jsonUtils.jsonStringToMap(jsonData);
         }
         try {
-            result = salService.selectQryList("sal2010_select_header", reqParam);
-            System.out.println("$$$$$$$$$######## sal2010_select_header");
+            result = salService.selectQryOne("sal2010_select_header", reqParam);
 
             Map<String, Object> jsonList = new HashMap<>();
             jsonList.put("data", result);

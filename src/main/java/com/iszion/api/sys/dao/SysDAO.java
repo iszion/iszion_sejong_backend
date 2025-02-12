@@ -13,8 +13,8 @@ import java.util.List;
 public class SysDAO {
 
     @Autowired
-    @Qualifier("db1SqlSessionTemplate")
-    private SqlSessionTemplate db1SqlSessionTemplate;
+    @Qualifier("secondarySqlSessionTemplate")
+    private SqlSessionTemplate secondarySqlSessionTemplate;
 
 
     /**
@@ -24,7 +24,7 @@ public class SysDAO {
      * @exception Exception
      */
     public Object selectQryOne(String queryId,Object searchObj) throws Exception {
-        return db1SqlSessionTemplate.selectOne(queryId, searchObj);
+        return secondarySqlSessionTemplate.selectOne(queryId, searchObj);
     }
 
     /**
@@ -34,7 +34,7 @@ public class SysDAO {
      * @exception Exception
      */
     public HashMap<String, Object> selectQryOne1(String queryId, Object searchObj) throws Exception {
-        return db1SqlSessionTemplate.selectOne(queryId, searchObj);
+        return secondarySqlSessionTemplate.selectOne(queryId, searchObj);
     }
     /**
      * 조회리스트
@@ -43,7 +43,7 @@ public class SysDAO {
      * @exception Exception
      */
     public List<?> selectQryList(String queryId, Object searchObj) throws Exception {
-        return db1SqlSessionTemplate.selectList(queryId, searchObj);
+        return secondarySqlSessionTemplate.selectList(queryId, searchObj);
     }
     /**
      * 조회리스트
@@ -52,7 +52,7 @@ public class SysDAO {
      * @exception Exception
      */
     public Object selectQryListCnt(String queryId,Object searchObj) throws Exception {
-        return db1SqlSessionTemplate.selectOne(queryId, searchObj);
+        return secondarySqlSessionTemplate.selectOne(queryId, searchObj);
     }
     /**
      * 입력
@@ -61,7 +61,7 @@ public class SysDAO {
      * @exception Exception
      */
     public int insertQry(String queryId,Object searchObj) throws Exception {
-        return db1SqlSessionTemplate.insert(queryId, searchObj);
+        return secondarySqlSessionTemplate.insert(queryId, searchObj);
     }
     /**
      * 수정
@@ -70,7 +70,7 @@ public class SysDAO {
      * @exception Exception
      */
     public int updateQry(String queryId,Object searchObj) throws Exception {
-        return db1SqlSessionTemplate.update(queryId, searchObj);
+        return secondarySqlSessionTemplate.update(queryId, searchObj);
     }
     /**
      *  삭제
@@ -79,7 +79,7 @@ public class SysDAO {
      * @exception Exception
      */
     public int deleteQry(String queryId,Object searchObj) throws Exception {
-        return db1SqlSessionTemplate.delete(queryId, searchObj);
+        return secondarySqlSessionTemplate.delete(queryId, searchObj);
     }
 
 }

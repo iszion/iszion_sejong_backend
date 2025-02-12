@@ -7,7 +7,7 @@
         SELECT
                a.COMM_CD            as  commCd
              , a.COMM_NM            as  commNm
-        FROM MCOMMTB a
+        FROM db_izbook.XCOMMTB a
         WHERE LEFT(a.COMM_CD,3) =   #{paramCommCd1}
           AND SUBSTRING(a.COMM_CD, 4,4) != '0000'
 
@@ -126,9 +126,9 @@
             , e.SIGN_FILE_NM   as  signFileNm
             , e.SIGN_FILE_NM_FULL as signFileNmFull
         FROM HEMPTB e
-            left join MCOMMTB c1 ON c1.COMM_CD = e.DEPT_CD
-            left join MCOMMTB c2 ON c2.COMM_CD = e.PSTN_CD
-            left join MCOMMTB c3 ON c3.COMM_CD = e.TITL_CD
+            left join db_izbook.XCOMMTB c1 ON c1.COMM_CD = e.DEPT_CD
+            left join db_izbook.XCOMMTB c2 ON c2.COMM_CD = e.PSTN_CD
+            left join db_izbook.XCOMMTB c3 ON c3.COMM_CD = e.TITL_CD
         WHERE 1=1
         <if test='paramDeptCd != null and paramDeptCd != ""'>
             AND e.DEPT_CD = #{paramDeptCd}
@@ -171,19 +171,13 @@
             , e.SIGN_FILE_NM    as  signFileNm
             , e.SIGN_FILE_NM_FULL   as signFileNmFull
         FROM HEMPTB e
-                 left join MCOMMTB c1 ON c1.COMM_CD = e.DEPT_CD
-                 left join MCOMMTB c2 ON c2.COMM_CD = e.PSTN_CD
-                 left join MCOMMTB c3 ON c3.COMM_CD = e.TITL_CD
+                 left join db_izbook.XCOMMTB c1 ON c1.COMM_CD = e.DEPT_CD
+                 left join db_izbook.XCOMMTB c2 ON c2.COMM_CD = e.PSTN_CD
+                 left join db_izbook.XCOMMTB c3 ON c3.COMM_CD = e.TITL_CD
         where 1=1
           AND e.EMP_CD      =   #{ paramEmpCd }
     </select>
 
-    <select id="mst1010_empCd_check" resultType="java.util.HashMap">
-        SELECT
-              count(e.EMP_CD)   as  ch
-        FROM HEMPTB e
-        where e.EMP_CD      =   #{ paramEmpCd }
-    </select>
 
     <insert id="mst1010_insert" parameterType="java.util.Map">
         <foreach collection="list1" item="item" separator=";">
@@ -369,8 +363,8 @@
 
         FROM MPRODTB d
             left join MAGENTTB ag ON ag.AGENT_CD = d.AGENT_CD
-            left join MCOMMTB c1 ON c1.COMM_CD = d.PROD_DIV
-            left join MCOMMTB c2 ON c2.COMM_CD = d.PROD_FG
+            left join db_izbook.XCOMMTB c1 ON c1.COMM_CD = d.PROD_DIV
+            left join db_izbook.XCOMMTB c2 ON c2.COMM_CD = d.PROD_FG
 
         WHERE 1 = 1
         <if test='paramProdDiv != null and paramProdDiv != ""'>
@@ -432,8 +426,8 @@
 
         FROM MPRODTB d
              left join MAGENTTB ag ON ag.AGENT_CD = d.AGENT_CD
-             left join MCOMMTB c1 ON c1.COMM_CD = d.PROD_DIV
-             left join MCOMMTB c2 ON c2.COMM_CD = d.PROD_FG
+             left join db_izbook.XCOMMTB c1 ON c1.COMM_CD = d.PROD_DIV
+             left join db_izbook.XCOMMTB c2 ON c2.COMM_CD = d.PROD_FG
         WHERE d.PROD_CD     = 	#{paramProdCd}
 
     </select>
@@ -632,7 +626,7 @@
             , a.UPDATE_ID		as	updateId
 
         FROM MCUSTTB a
-            left join MCOMMTB c1 ON c1.COMM_CD = a.DIV_CD
+            left join db_izbook.XCOMMTB c1 ON c1.COMM_CD = a.DIV_CD
 
         WHERE 1 = 1
           AND a.USE_YN = #{paramUseYn }
@@ -700,7 +694,7 @@
             , 'U'               as  iuD
 
         FROM MCUSTTB a
-             left join MCOMMTB c1 ON c1.COMM_CD = a.DIV_CD
+             left join db_izbook.XCOMMTB c1 ON c1.COMM_CD = a.DIV_CD
         WHERE a.CUST_CD         = 	#{paramCustCd}
 
     </select>
@@ -1081,165 +1075,6 @@
         <foreach collection="list1" item="item" separator=";">
             DELETE FROM MAGENTTB
             WHERE AGENT_CD  =   #{item.agentCd}
-        </foreach>
-    </delete>
-
-
-    <!--    공통코드 list -->
-    <select id="mst5090_list" resultType="java.util.HashMap">
-        SELECT
-                  LEFT(a.COMM_CD,3)     as  commCd1
-                , LEFT(a.COMM_CD,3)     as  oldCommCd1
-                , a.COMM_NM             as  commNm
-                , count(*) - 1   	    as  cnt
-                , a.COMM_ETC            as  commEtc
-                , a.EXPLAINS            as  explains
-                , a.USE_YN              as  useYn
-                , a.REG_DATE            as  regDate
-                , a.REG_ID              as  regId
-                , a.UPDATE_DATE         as  updateDate
-                , a.UPDATE_ID           as  updateId
-                , 'U'                   as  iuD
-        FROM MCOMMTB a
-        GROUP BY LEFT(COMM_CD, 3)
-    </select>
-
-    <!--    공통코드 선택자료 list -->
-    <select id="mst5090_select" resultType="java.util.HashMap">
-        SELECT
-            SUBSTRING(a.COMM_CD,4,4)     as  commCd2
-             , SUBSTRING(a.COMM_CD,4,4)     as  oldCommCd2
-             , a.COMM_NM            as  commNm
-             , a.COMM_ETC           as  commEtc
-             , a.EXPLAINS           as  explains
-             , a.USE_YN             as  useYn
-             , a.REG_DATE           as  regDate
-             , a.REG_ID             as  regId
-             , a.UPDATE_DATE        as  updateDate
-             , a.UPDATE_ID          as  updateId
-             , 'U'                  as  iuD
-        FROM MCOMMTB a
-        where LEFT(a.COMM_CD,3) = #{ paramCommCd1 }
-          AND SUBSTRING(a.COMM_CD, 4,4) != '0000'
-    </select>
-
-    <!--    공통코드 그룹 신규등록  -->
-    <insert id="mst5090_group_insert" parameterType="java.util.Map">
-        <foreach collection="list1" item="item" separator=";">
-            INSERT INTO MCOMMTB
-            (
-            COMM_CD
-            , COMM_NM
-            , COMM_ETC
-            , EXPLAINS
-            , USE_YN
-            , REG_DATE
-            , REG_ID
-            , UPDATE_DATE
-            , UPDATE_ID
-            ) VALUES (
-            CONCAT(#{item.commCd1}, '0000')
-            , #{item.commNm}
-            , #{item.commEtc}
-            , #{item.explains}
-            , #{item.useYn}
-            , NOW()
-            , #{userId}
-            , NOW()
-            , #{userId}
-            )
-        </foreach>
-    </insert>
-
-    <!--    공통코드 그룹 수정 -->
-    <update id="mst5090_group_update" parameterType="java.util.Map">
-        <foreach collection="list1" item="item" separator=";">
-            UPDATE MCOMMTB
-            SET
-                COMM_CD         =   CONCAT(#{item.commCd1}, '0000')
-            ,   COMM_NM         =   #{item.commNm}
-            ,   COMM_ETC        =   #{item.commEtc}
-            ,   EXPLAINS        =   #{item.explains}
-            ,   USE_YN          =   #{item.useYn}
-            ,   UPDATE_DATE     =   NOW()
-            ,   UPDATE_ID       =   #{userId}
-
-            WHERE COMM_CD   =   CONCAT(#{item.oldCommCd1}, '0000')
-        </foreach>
-    </update>
-
-    <!--    공통코드 그룹항목 전체 수정 -->
-    <update id="mst5090_group_all_update" parameterType="java.util.Map">
-        <foreach collection="list1" item="item" separator=";">
-            UPDATE MCOMMTB
-            SET
-            COMM_CD = CONCAT(#{item.commCd1}, SUBSTRING(COMM_CD,4,4))
-            ,   UPDATE_DATE     =   NOW()
-            ,   UPDATE_ID       =   #{userId}
-
-            WHERE LEFT(COMM_CD,3)   =   #{item.oldCommCd1}
-            AND SUBSTRING(COMM_CD, 4,4) != '0000'
-        </foreach>
-    </update>
-
-    <!--    공통코드 그룹 삭제 -->
-    <delete id="mst5090_group_delete" parameterType="java.util.Map">
-        <foreach collection="list1" item="item" separator=";">
-            DELETE FROM MCOMMTB
-            WHERE LEFT(COMM_CD,3)  	=   #{item.oldCommCd1 }
-        </foreach>
-    </delete>
-
-    <!--    공통코드 신규등록  -->
-    <insert id="mst5090_insert" parameterType="java.util.Map">
-        <foreach collection="list1" item="item" separator=";">
-            INSERT INTO MCOMMTB
-            (
-            COMM_CD
-            , COMM_NM
-            , COMM_ETC
-            , EXPLAINS
-            , USE_YN
-            , REG_DATE
-            , REG_ID
-            , UPDATE_DATE
-            , UPDATE_ID
-            ) VALUES (
-            CONCAT(#{item.commCd1}, #{item.commCd2 } )
-            , #{item.commNm}
-            , #{item.commEtc}
-            , #{item.explains}
-            , #{item.useYn}
-            , NOW()
-            , #{userId}
-            , NOW()
-            , #{userId}
-            )
-        </foreach>
-    </insert>
-
-    <!--    공통코드 수정 -->
-    <update id="mst5090_update" parameterType="java.util.Map">
-        <foreach collection="list1" item="item" separator=";">
-            UPDATE MCOMMTB
-            SET
-                COMM_CD         =   CONCAT(#{item.commCd1}, #{item.commCd2})
-            ,   COMM_NM         =   #{item.commNm}
-            ,   COMM_ETC        =   #{item.commEtc}
-            ,   EXPLAINS        =   #{item.explains}
-            ,   USE_YN          =   #{item.useYn}
-            ,   UPDATE_DATE     =   NOW()
-            ,   UPDATE_ID       =   #{userId}
-
-            WHERE COMM_CD   =   CONCAT(#{item.oldCommCd1}, #{item.oldCommCd2})
-        </foreach>
-    </update>
-
-    <!--    공통코드 그룹 삭제 -->
-    <delete id="mst5090_delete" parameterType="java.util.Map">
-        <foreach collection="list1" item="item" separator=";">
-            DELETE FROM MCOMMTB
-            WHERE COMM_CD  	=   CONCAT(#{item.oldCommCd1 }, #{item.oldCommCd2})
         </foreach>
     </delete>
 

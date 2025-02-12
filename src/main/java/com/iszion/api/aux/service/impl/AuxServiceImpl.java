@@ -2,7 +2,6 @@ package com.iszion.api.aux.service.impl;
 
 import com.iszion.api.aux.dao.AuxDAO;
 import com.iszion.api.aux.service.AuxService;
-import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -10,9 +9,6 @@ import java.util.List;
 
 @Service("auxService")
 public class AuxServiceImpl implements AuxService {
-
-//    @Resource(name = "auxDAO")
-//    private AuxDAO auxDAO;
 
     private final AuxDAO auxDAO;
 

@@ -11,8 +11,8 @@ import java.util.List;
 public class CoupDAO {
 
     @Autowired
-    @Qualifier("db2SqlSessionTemplate")
-    private SqlSessionTemplate db2SqlSessionTemplate;
+    @Qualifier("coupSqlSessionTemplate")
+    private SqlSessionTemplate coupSqlSessionTemplate;
 
     /**
      * 조회 한건
@@ -21,7 +21,7 @@ public class CoupDAO {
      * @exception Exception
      */
     public Object selectQryOne(String queryId,Object searchObj) throws Exception {
-        return db2SqlSessionTemplate.selectOne(queryId, searchObj);
+        return coupSqlSessionTemplate.selectOne(queryId, searchObj);
     }
     /**
      * 조회리스트
@@ -30,7 +30,7 @@ public class CoupDAO {
      * @exception Exception
      */
     public List<?> selectQryList(String queryId, Object searchObj) throws Exception {
-        return db2SqlSessionTemplate.selectList(queryId, searchObj);
+        return coupSqlSessionTemplate.selectList(queryId, searchObj);
     }
 
     /**
@@ -40,7 +40,7 @@ public class CoupDAO {
      * @exception Exception
      */
     public Object selectQryListCnt(String queryId,Object searchObj) throws Exception {
-        return db2SqlSessionTemplate.selectOne(queryId, searchObj);
+        return coupSqlSessionTemplate.selectOne(queryId, searchObj);
     }
     /**
      * 입력
@@ -49,7 +49,7 @@ public class CoupDAO {
      * @exception Exception
      */
     public int insertQry(String queryId,Object searchObj) throws Exception {
-        return db2SqlSessionTemplate.insert(queryId, searchObj);
+        return coupSqlSessionTemplate.insert(queryId, searchObj);
     }
     /**
      * 수정
@@ -58,7 +58,7 @@ public class CoupDAO {
      * @exception Exception
      */
     public int updateQry(String queryId,Object searchObj) throws Exception {
-        return db2SqlSessionTemplate.update(queryId, searchObj);
+        return coupSqlSessionTemplate.update(queryId, searchObj);
     }
     /**
      *  삭제
@@ -67,6 +67,6 @@ public class CoupDAO {
      * @exception Exception
      */
     public int deleteQry(String queryId,Object searchObj) throws Exception {
-        return db2SqlSessionTemplate.delete(queryId, searchObj);
+        return coupSqlSessionTemplate.delete(queryId, searchObj);
     }
 }
