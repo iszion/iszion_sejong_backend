@@ -161,41 +161,6 @@ public class ComController {
         return jsonDataRtn;
     }
     
-    /* *******************************************************************************
-     ** 서브메뉴 가져오기
-     ** ******************************************************************************* */
-    @PostMapping("/menu_sub_list")
-    public String menu_sub_list(HttpServletRequest request, @RequestHeader("Authorization") String token) throws Exception {
-        System.out.println("menu_sub_list.........");
-        Object result;
-
-        String jsonDataRtn = "";
-        RequestUtil requestUtil = new RequestUtil();
-        JsonUtils jsonUtils = new JsonUtils();
-
-        String jsonData = requestUtil.getBody(request);
-
-        Map<String, Object> reqParam = new HashMap<String, Object>();
-        if (!jsonData.isEmpty()) {
-            reqParam = jsonUtils.jsonStringToMap(jsonData);
-        }
-        try {
-            result = comService.selectQryList("menu_sub_list", reqParam);
-
-            Map<String, Object> jsonList = new HashMap<>();
-            jsonList.put("data", result);
-
-            jsonDataRtn = jsonUtils.getToJson(jsonList);
-            jsonDataRtn = jsonDataRtn.replaceAll("null", "\"\"");
-            LOGGER.info("-------------------" + jsonDataRtn);
-
-        } catch (Exception e) {
-            LOGGER.info("Exception : " + e.getMessage());
-            e.printStackTrace();
-
-        }
-        return jsonDataRtn;
-    }
 
     /* *******************************************************************************
      ** 패스워드 확인 부분
@@ -327,7 +292,6 @@ public class ComController {
     /* *******************************************************************************
      ** 메뉴 group list 부분
      ** ******************************************************************************* */
-//    @RequestMapping(value="/prog_group_list", produces="application/json; charset=utf8" , method = RequestMethod.GET)
     @PostMapping("/prog_group_list")
     public String prog_group_list(HttpServletRequest request) throws IOException {
         Object result;
@@ -360,6 +324,38 @@ public class ComController {
         return jsonDataRtn;
     }
     
+    @PostMapping("/prog_group_list_comp")
+    public String prog_group_list_comp(HttpServletRequest request) throws IOException {
+        Object result;
+
+        String jsonDataRtn = "";
+        RequestUtil requestUtil = new RequestUtil();
+        JsonUtils jsonUtils = new JsonUtils();
+
+        String jsonData = requestUtil.getBody(request);
+
+        Map<String, Object> reqParam = new HashMap<String, Object>();
+        if (!jsonData.isEmpty()) {
+            reqParam = jsonUtils.jsonStringToMap(jsonData);
+        }
+        try {
+            result = comService.selectQryList("prog_group_list_comp", reqParam);
+
+            Map<String, Object> jsonList = new HashMap<>();
+            jsonList.put("data", result);
+
+            jsonDataRtn = jsonUtils.getToJson(jsonList);
+            jsonDataRtn = jsonDataRtn.replaceAll("null", "\"\"");
+            LOGGER.info("-------------------" + jsonDataRtn);
+
+        } catch (Exception e) {
+            LOGGER.info("Exception : " + e.getMessage());
+            e.printStackTrace();
+
+        }
+        return jsonDataRtn;
+    }
+
 
     /* *******************************************************************************
      ** 회사정보 처리부분 부분
@@ -569,6 +565,110 @@ public class ComController {
     }
 
 
+    @PostMapping("/com1010_select_user")
+    public String com1010_select_user(HttpServletRequest request, @RequestHeader("Authorization") String token) throws IOException {
+        Object result;
+
+        String jsonDataRtn = "";
+        RequestUtil requestUtil = new RequestUtil();
+        JsonUtils jsonUtils = new JsonUtils();
+
+        String jsonData = requestUtil.getBody(request);
+
+        Map<String, Object> reqParam = new HashMap<String, Object>();
+        if (!jsonData.isEmpty()) {
+            reqParam = jsonUtils.jsonStringToMap(jsonData);
+        }
+        try {
+            result = comService.selectQryOne("com1010_select_user", reqParam);
+
+            Map<String, Object> jsonList = new HashMap<>();
+            jsonList.put("data", result);
+
+            jsonDataRtn = jsonUtils.getToJson(jsonList);
+            jsonDataRtn = jsonDataRtn.replaceAll("null", "\"\"");
+            LOGGER.info("-------------------" + jsonDataRtn);
+
+        } catch (Exception e) {
+            LOGGER.info("Exception : " + e.getMessage());
+            e.printStackTrace();
+
+        }
+        return jsonDataRtn;
+    }
+
+
+    @PostMapping("/com1010_save_user")
+    public String com1010_save_user(HttpServletRequest request, @RequestHeader("Authorization") String token) throws Exception {
+        String accessToken = token.substring(7);
+        Authentication userInfo = jwtTokenProvider.getAuthentication(accessToken);
+
+        // 트랜잭션 정의
+        DefaultTransactionDefinition def = new DefaultTransactionDefinition();
+        def.setName("SomeTxName");
+        def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
+        TransactionStatus status = primaryTransactionManager.getTransaction(def);
+        // 트랜잭션 정의 끝
+
+        String jsonDataRtn = "";
+        String rtn = "0";
+        String rtnMsg = "";
+        List<?> divde = null;
+        Map<String, Object> map = new HashMap();
+        JsonUtils jsonUtil = new JsonUtils();
+        DataRequestUtil reqUtil = new DataRequestUtil();
+
+        String jsonData = reqUtil.getBody(request);
+
+        try {
+            Map<String, Object> mapDivde = jsonUtil.jsonStringToMap(jsonData);
+            Map divde_N1 = (Map) mapDivde.get("no1");
+            if (divde_N1 != null) {
+                List divde_U = (List) divde_N1.get("U");
+
+
+                if (!divde_U.isEmpty()) {
+                    Map param = new HashMap();
+                    param.put("list1", divde_U);
+                    param.put("userId", userInfo.getName());
+                    int rtnU = comService.updateQry("com1010_update_user", param);
+                    if (rtnU > 0) {
+                        if (rtn == "0") {
+                            rtn = "0";
+                        } else {
+                            rtn = "1";
+                        }
+                    } else {
+                        rtn = "1";
+                    }
+                    divde = divde_U;
+                }
+
+            }
+            if (rtn == "0") {
+                rtnMsg = "정상 처리되었습니다.";
+                primaryTransactionManager.commit(status);
+            } else {
+                rtnMsg = "비정상 처리되었습니다.";
+                primaryTransactionManager.rollback(status);
+            }
+        } catch (Exception e) {
+            primaryTransactionManager.rollback(status);
+            rtn = "3";
+            if (e.getCause() instanceof SQLException sqlException) {
+                rtnMsg = "처리실패 : " + sqlException.getMessage();  // Get the specific error message from SQLException
+            } else {
+                rtnMsg = "예상치 못한 오류가 발생했습니다.";
+            }
+        }
+        map.put("rtn", rtn);
+        map.put("rtnMsg", rtnMsg);
+        map.put("data", divde);
+        jsonDataRtn = jsonUtil.getToJson(map).replaceAll("null", "\"\"");
+        return jsonDataRtn;
+    }
+
+
     /* *******************************************************************************
      ** 사원정보 처리부분 부분
      ** ******************************************************************************* */
@@ -760,6 +860,144 @@ public class ComController {
                     }
                     divde = divde_D;
                 }
+            }
+            if (rtn == "0") {
+                rtnMsg = "정상 처리되었습니다.";
+                primaryTransactionManager.commit(status);
+            } else {
+                rtnMsg = "비정상 처리되었습니다.";
+                primaryTransactionManager.rollback(status);
+            }
+        } catch (Exception e) {
+            primaryTransactionManager.rollback(status);
+            rtn = "3";
+            if (e.getCause() instanceof SQLException sqlException) {
+                rtnMsg = "처리실패 : " + sqlException.getMessage();  // Get the specific error message from SQLException
+            } else {
+                rtnMsg = "예상치 못한 오류가 발생했습니다.";
+            }
+        }
+        map.put("rtn", rtn);
+        map.put("rtnMsg", rtnMsg);
+        map.put("data", divde);
+        jsonDataRtn = jsonUtil.getToJson(map).replaceAll("null", "\"\"");
+        return jsonDataRtn;
+    }
+
+    /* *******************************************************************************
+     ** 사원정보 처리부분 부분
+     ** ******************************************************************************* */
+    @PostMapping("/com1020_list_user")
+    public String com1020_list_user(HttpServletRequest request, @RequestHeader("Authorization") String token) throws IOException {
+        Object result;
+
+        String jsonDataRtn = "";
+        RequestUtil requestUtil = new RequestUtil();
+        JsonUtils jsonUtils = new JsonUtils();
+
+        String jsonData = requestUtil.getBody(request);
+
+        Map<String, Object> reqParam = new HashMap<String, Object>();
+        if (!jsonData.isEmpty()) {
+            reqParam = jsonUtils.jsonStringToMap(jsonData);
+        }
+        try {
+            result = comService.selectQryList("com1020_list_user", reqParam);
+
+            Map<String, Object> jsonList = new HashMap<>();
+            jsonList.put("data", result);
+
+            jsonDataRtn = jsonUtils.getToJson(jsonList);
+            jsonDataRtn = jsonDataRtn.replaceAll("null", "\"\"");
+            LOGGER.info("-------------------" + jsonDataRtn);
+
+        } catch (Exception e) {
+            LOGGER.info("Exception : " + e.getMessage());
+            e.printStackTrace();
+
+        }
+        return jsonDataRtn;
+    }
+
+    @PostMapping("/com1020_select_user")
+    public String com1020_select_user(HttpServletRequest request, @RequestHeader("Authorization") String token) throws IOException {
+        Object result;
+
+        String jsonDataRtn = "";
+        RequestUtil requestUtil = new RequestUtil();
+        JsonUtils jsonUtils = new JsonUtils();
+
+        String jsonData = requestUtil.getBody(request);
+
+        Map<String, Object> reqParam = new HashMap<String, Object>();
+        if (!jsonData.isEmpty()) {
+            reqParam = jsonUtils.jsonStringToMap(jsonData);
+        }
+        try {
+            result = comService.selectQryOne("com1020_select_user", reqParam);
+
+            Map<String, Object> jsonList = new HashMap<>();
+            jsonList.put("data", result);
+
+            jsonDataRtn = jsonUtils.getToJson(jsonList);
+            jsonDataRtn = jsonDataRtn.replaceAll("null", "\"\"");
+            LOGGER.info("-------------------" + jsonDataRtn);
+
+        } catch (Exception e) {
+            LOGGER.info("Exception : " + e.getMessage());
+            e.printStackTrace();
+
+        }
+        return jsonDataRtn;
+    }
+
+    @PostMapping("/com1020_save_user")
+    public String com1020_save_user(HttpServletRequest request, @RequestHeader("Authorization") String token) throws Exception {
+        String accessToken = token.substring(7);
+        Authentication userInfo = jwtTokenProvider.getAuthentication(accessToken);
+
+        // 트랜잭션 정의
+        DefaultTransactionDefinition def = new DefaultTransactionDefinition();
+        def.setName("SomeTxName");
+        def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
+        TransactionStatus status = primaryTransactionManager.getTransaction(def);
+        // 트랜잭션 정의 끝
+
+
+        String jsonDataRtn = "";
+        String rtn = "0";
+        String rtnMsg = "";
+        List<?> divde = null;
+        Map<String, Object> map = new HashMap();
+        JsonUtils jsonUtil = new JsonUtils();
+        DataRequestUtil reqUtil = new DataRequestUtil();
+        BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+
+        String jsonData = reqUtil.getBody(request);
+        try {
+            Map<String, Object> mapDivde = jsonUtil.jsonStringToMap(jsonData);
+            Map divde_N1 = (Map) mapDivde.get("no1");
+            if (divde_N1 != null) {
+                List divde_U = (List) divde_N1.get("U");
+                List divde_D = (List) divde_N1.get("D");
+
+                if (!divde_U.isEmpty()) {
+                    Map param = new HashMap();
+                    param.put("list1", divde_U);
+                    param.put("userId", userInfo.getName());
+                    int rtnU = comService.updateQry("com1020_update_user", param);
+                    if (rtnU > 0) {
+                        if (rtn == "0") {
+                            rtn = "0";
+                        } else {
+                            rtn = "1";
+                        }
+                    } else {
+                        rtn = "1";
+                    }
+                    divde = divde_U;
+                }
+
             }
             if (rtn == "0") {
                 rtnMsg = "정상 처리되었습니다.";
@@ -1883,8 +2121,16 @@ public class ComController {
                     Map param = new HashMap();
                     param.put("list1", divde_D);
                     param.put("userId", userInfo.getName());
-                    int rtn1 = comService.deleteQry("com5020_delete", param);
-                    System.out.println("=====>>>  " + rtn1);
+                    int rtnD = comService.deleteQry("com5020_delete", param);
+                    if (rtnD > 0) {
+                        if (rtn == "0") {
+                            rtn = "0";
+                        } else {
+                            rtn = "1";
+                        }
+                    } else {
+                        rtn = "1";
+                    }
                     divde = divde_D;
                 }
 
@@ -1892,7 +2138,16 @@ public class ComController {
                     Map param = new HashMap();
                     param.put("list1", divde_I);
                     param.put("userId", userInfo.getName());
-                    comService.insertQry("com5020_insert", param);
+                    int rtnI = comService.insertQry("com5020_insert", param);
+                    if (rtnI > 0) {
+                        if (rtn == "0") {
+                            rtn = "0";
+                        } else {
+                            rtn = "1";
+                        }
+                    } else {
+                        rtn = "1";
+                    }
                     divde = divde_I;
                 }
 
@@ -1900,17 +2155,37 @@ public class ComController {
                     Map param = new HashMap();
                     param.put("list1", divde_U);
                     param.put("userId", userInfo.getName());
-                    comService.updateQry("com5020_update", param);
+                    int rtnU = comService.updateQry("com5020_update", param);
+                    if (rtnU > 0) {
+                        if (rtn == "0") {
+                            rtn = "0";
+                        } else {
+                            rtn = "1";
+                        }
+                    } else {
+                        rtn = "1";
+                    }
                     divde = divde_U;
                 }
             }
-            primaryTransactionManager.commit(status);
+            if (rtn == "0") {
+                rtnMsg = "정상 처리되었습니다.";
+                primaryTransactionManager.commit(status);
+            } else {
+                rtnMsg = "비정상 처리되었습니다.";
+                primaryTransactionManager.rollback(status);
+            }
         } catch (Exception e) {
             primaryTransactionManager.rollback(status);
-            rtn = "1";
-            e.printStackTrace();
+            rtn = "3";
+            if (e.getCause() instanceof SQLException sqlException) {
+                rtnMsg = "처리실패 : " + sqlException.getMessage();  // Get the specific error message from SQLException
+            } else {
+                rtnMsg = "예상치 못한 오류가 발생했습니다.";
+            }
         }
         map.put("rtn", rtn);
+        map.put("rtnMsg", rtnMsg);
         map.put("data", divde);
         jsonDataRtn = jsonUtil.getToJson(map).replaceAll("null", "\"\"");
 
@@ -1974,8 +2249,8 @@ public class ComController {
     /* *******************************************************************************
      ** 시스템관리자 공통코드 처리부분 부분
      ** ******************************************************************************* */
-    @PostMapping("/com9090_list")
-    public String com9090_list(HttpServletRequest request, @RequestHeader("Authorization") String token) throws IOException {
+    @PostMapping("/com7010_list")
+    public String com7010_list(HttpServletRequest request, @RequestHeader("Authorization") String token) throws IOException {
         Object result;
 
         String jsonDataRtn = "";
@@ -1989,7 +2264,7 @@ public class ComController {
             reqParam = jsonUtils.jsonStringToMap(jsonData);
         }
         try {
-            result = comService.selectQryList("com9090_list", reqParam);
+            result = comService.selectQryList("com7010_list", reqParam);
 
             Map<String, Object> jsonList = new HashMap<>();
             jsonList.put("data", result);
@@ -2006,8 +2281,8 @@ public class ComController {
         return jsonDataRtn;
     }
 
-    @PostMapping("/com9090_select")
-    public String com9090_select(HttpServletRequest request, @RequestHeader("Authorization") String token) throws IOException {
+    @PostMapping("/com7010_select")
+    public String com7010_select(HttpServletRequest request, @RequestHeader("Authorization") String token) throws IOException {
         Object result;
 
         String jsonDataRtn = "";
@@ -2021,7 +2296,7 @@ public class ComController {
             reqParam = jsonUtils.jsonStringToMap(jsonData);
         }
         try {
-            result = comService.selectQryList("com9090_select", reqParam);
+            result = comService.selectQryList("com7010_select", reqParam);
 
             Map<String, Object> jsonList = new HashMap<>();
             jsonList.put("data", result);
@@ -2038,8 +2313,8 @@ public class ComController {
         return jsonDataRtn;
     }
 
-    @PostMapping("/com9090_group_save")
-    public String com9090_group_save(HttpServletRequest request, @RequestHeader("Authorization") String token) throws Exception {
+    @PostMapping("/com7010_group_save")
+    public String com7010_group_save(HttpServletRequest request, @RequestHeader("Authorization") String token) throws Exception {
 
         String accessToken = token.substring(7);
         Authentication userInfo = jwtTokenProvider.getAuthentication(accessToken);
@@ -2073,7 +2348,7 @@ public class ComController {
                     Map param = new HashMap();
                     param.put("list1", divde_I);
                     param.put("userId", userInfo.getName());
-                    int rtnI = comService.insertQry("com9090_group_insert", param);
+                    int rtnI = comService.insertQry("com7010_group_insert", param);
                     if(rtnI > 0)  { if(rtn =="0") {rtn = "0";} else {rtn = "1"; }} else { rtn = "1"; }
                     divde = divde_I;
                 }
@@ -2082,8 +2357,8 @@ public class ComController {
                     Map param = new HashMap();
                     param.put("list1", divde_U);
                     param.put("userId", userInfo.getName());
-                    int rtnU = comService.updateQry("com9090_group_update", param);
-                    rtnU = comService.updateQry("com9090_group_all_update", param);
+                    int rtnU = comService.updateQry("com7010_group_update", param);
+                    rtnU = comService.updateQry("com7010_group_all_update", param);
                     if(rtnU > 0)  { if(rtn =="0") {rtn = "0";} else {rtn = "1"; }} else { rtn = "1"; }
                     divde = divde_U;
                 }
@@ -2092,7 +2367,7 @@ public class ComController {
                     Map param = new HashMap();
                     param.put("list1", divde_D);
                     param.put("userId", userInfo.getName());
-                    int rtnD = comService.deleteQry("com9090_group_delete", param);
+                    int rtnD = comService.deleteQry("com7010_group_delete", param);
                     if(rtnD > 0)  { if(rtn =="0") {rtn = "0";} else {rtn = "1"; }} else { rtn = "1"; }
                     divde = divde_D;
                 }
@@ -2120,8 +2395,8 @@ public class ComController {
         return jsonDataRtn;
     }
 
-    @PostMapping("/com9090_save")
-    public String com9090_save(HttpServletRequest request, @RequestHeader("Authorization") String token) throws Exception {
+    @PostMapping("/com7010_save")
+    public String com7010_save(HttpServletRequest request, @RequestHeader("Authorization") String token) throws Exception {
 
         String accessToken = token.substring(7);
         Authentication userInfo = jwtTokenProvider.getAuthentication(accessToken);
@@ -2155,7 +2430,7 @@ public class ComController {
                     Map param = new HashMap();
                     param.put("list1", divde_I);
                     param.put("userId", userInfo.getName());
-                    int rtnI = comService.insertQry("com9090_insert", param);
+                    int rtnI = comService.insertQry("com7010_insert", param);
                     if(rtnI > 0)  { if(rtn =="0") {rtn = "0";} else {rtn = "1"; }} else { rtn = "1"; }
                     divde = divde_I;
                 }
@@ -2164,7 +2439,7 @@ public class ComController {
                     Map param = new HashMap();
                     param.put("list1", divde_U);
                     param.put("userId", userInfo.getName());
-                    int rtnU = comService.updateQry("com9090_update", param);
+                    int rtnU = comService.updateQry("com7010_update", param);
                     if(rtnU > 0)  { if(rtn =="0") {rtn = "0";} else {rtn = "1"; }} else { rtn = "1"; }
                     divde = divde_U;
                 }
@@ -2173,7 +2448,7 @@ public class ComController {
                     Map param = new HashMap();
                     param.put("list1", divde_D);
                     param.put("userId", userInfo.getName());
-                    int rtnD = comService.deleteQry("com9090_delete", param);
+                    int rtnD = comService.deleteQry("com7010_delete", param);
                     if(rtnD > 0)  { if(rtn =="0") {rtn = "0";} else {rtn = "1"; }} else { rtn = "1"; }
                     divde = divde_D;
                 }

@@ -9,9 +9,5 @@
 
 
 
-    <select id="aux1010_list" resultType="java.util.HashMap">
-
-    </select>
-
 
 </mapper>

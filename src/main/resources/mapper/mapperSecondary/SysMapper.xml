@@ -39,6 +39,36 @@
         </foreach>
     </insert>
 
+
+    <!--    메뉴 그룹>항목정보 list -->
+    <select id="menu_sub_list" resultType="java.util.HashMap">
+        SELECT
+               a.SEQ                                as      id
+             , a.MENU_PARENT                        as      menuParent
+             , a.MENU_ID                            as      menuId
+             , CONCAT('sub_menu_', a.PROG_ID)       as      labelExt
+             , a.PROG_NM                            as      label
+             , a.PROG_ID                            as      progId
+             , a.ICON                               as      icon
+             , a.TYPE                               as      header
+             , CONCAT('/main/', LOWER(a.PROG_ID))   as      url
+             , CASE
+                 WHEN da.PROG_ID is null AND db.PROG_ID is null AND du.PROG_ID is null    THEN 'N'
+                 ELSE 'Y'
+                END    as      docYn
+        FROM db_izbook.XMENUTB a
+             left join db_izbook.XDOCATB da ON da.PROG_ID = a.PROG_ID
+             left join XDOCBTB db ON db.PROG_ID = a.PROG_ID
+             left join XDOCUTB du ON db.PROG_ID = a.PROG_ID
+             left join db_izbook.XGRNTPTB gp ON gp.COMP_CD = #{paramCompCd}  AND gp.PROG_ID = a.PROG_ID  AND gp.USER_ID = #{paramUserId}
+        WHERE 1=1
+          AND a.COMP_CD     =   #{ paramCompCd }
+          AND a.LOCATION    =   #{ paramGroupCd }
+          AND (#{paramUserId} = 'admin' OR (gp.SCR_YN = 'Y' OR a.MENU_PARENT = '#'))
+        ORDER BY a.SEQ
+    </select>
+
+
     <!--    언어정보 list -->
     <select id="lang_list" resultType="java.util.HashMap">
         SELECT
@@ -727,10 +757,8 @@
              , a.ICON                               as      icon
              , a.TYPE                               as      header
              , CONCAT('/main/', LOWER(a.PROG_ID))   as      url
-             , if(da.prog_id is null, 'N', 'Y')	    as      docAyn
-             , if(db.prog_id is null, 'N', 'Y')	    as      docByn
-        FROM XMENUTB a
-                 left join XDOCATB da ON da.PROG_ID = a.PROG_ID
+             , if(db.PROG_ID is null, 'N', 'Y')	    as      docYn
+        FROM db_izbook.XMENUTB a
                  left join XDOCBTB db ON db.PROG_ID = a.PROG_ID
         WHERE 1=1
           AND a.LOCATION = #{ paramGroupCd }
@@ -798,13 +826,10 @@
              , a.ICON                               as      icon
              , a.TYPE                               as      header
              , CONCAT('/main/', LOWER(a.PROG_ID))   as      url
-             , if(da.prog_id is null, 'N', 'Y')	    as      docAyn
-             , if(db.prog_id is null, 'N', 'Y')	    as      docByn
-             , if(du.prog_id is null, 'N', 'Y')	    as      docUyn
-        FROM XMENUTB a
-                 left join XDOCATB da ON da.PROG_ID = a.PROG_ID
-                 left join XDOCBTB db ON db.PROG_ID = a.PROG_ID
-                 left join XDOCUTB du ON du.PROG_ID = a.PROG_ID AND du.EMP_CD = #{paramEmpCd}
+             , if(du.PROG_ID is null, 'N', 'Y')	    as      docYn
+             , #{paramUserId}                       as      userid
+        FROM db_izbook.XMENUTB a
+                 left join XDOCUTB du ON du.PROG_ID = a.PROG_ID AND du.USER_ID = #{paramUserId}
         WHERE 1=1
           AND a.LOCATION = #{ paramGroupCd }
         ORDER BY a.SEQ
@@ -813,11 +838,11 @@
     <select id="sys4030_docU_select" resultType="java.util.HashMap">
         SELECT
                a.PROG_ID		    as  progId
-             , a.EMP_CD     	    as  empCd
+             , a.USER_ID     	    as  userId
              , a.CONTENTS          	as  contents
         FROM XDOCUTB a
         WHERE a.PROG_ID = #{ paramProgId }
-          AND a.EMP_CD  = #{ paramEmpCd }
+          AND a.USER_ID  = #{ paramUserId }
     </select>
 
 
@@ -827,13 +852,13 @@
             INSERT INTO XDOCUTB
             (
               PROG_ID
-            , EMP_CD
+            , USER_ID
             , CONTENTS
             , UPDATE_DATE
             , UPDATE_ID
             ) VALUES (
               #{item.progId}
-            , #{item.empCd}
+            , #{item.userId}
             , #{item.contents}
             , NOW()
             , #{userId}
@@ -850,8 +875,8 @@
             ,   UPDATE_DATE     = NOW()
             ,   UPDATE_ID       = #{userId}
 
-            WHERE PROG_ID = #{ item.progId }
-              AND EMP_CD  = #{ item.empCd }
+            WHERE PROG_ID   =   #{ item.progId }
+              AND USER_ID   =   #{ item.userId }
         </foreach>
     </update>
 
@@ -860,7 +885,7 @@
         <foreach collection="list1" item="item" separator=";">
             DELETE FROM XDOCUTB
             WHERE PROG_ID  	=   #{ item.progId }
-              AND EMP_CD    =   #{ item.empCd }
+              AND USER_ID   =   #{ item.userId }
         </foreach>
     </delete>
 

@@ -151,6 +151,43 @@ public class SysController {
     }
 
     /* *******************************************************************************
+     ** 서브메뉴 가져오기
+     ** ******************************************************************************* */
+    @PostMapping("/menu_sub_list")
+    public String menu_sub_list(HttpServletRequest request, @RequestHeader("Authorization") String token) throws Exception {
+        System.out.println("menu_sub_list.........");
+        Object result;
+
+        String jsonDataRtn = "";
+        RequestUtil requestUtil = new RequestUtil();
+        JsonUtils jsonUtils = new JsonUtils();
+
+        String jsonData = requestUtil.getBody(request);
+
+        Map<String, Object> reqParam = new HashMap<String, Object>();
+        if (!jsonData.isEmpty()) {
+            reqParam = jsonUtils.jsonStringToMap(jsonData);
+        }
+        try {
+            result = sysService.selectQryList("menu_sub_list", reqParam);
+
+            Map<String, Object> jsonList = new HashMap<>();
+            jsonList.put("data", result);
+
+            jsonDataRtn = jsonUtils.getToJson(jsonList);
+            jsonDataRtn = jsonDataRtn.replaceAll("null", "\"\"");
+            LOGGER.info("-------------------" + jsonDataRtn);
+
+        } catch (Exception e) {
+            LOGGER.info("Exception : " + e.getMessage());
+            e.printStackTrace();
+
+        }
+        return jsonDataRtn;
+    }
+
+
+    /* *******************************************************************************
      ** 게시판 처리 부분
      ** ******************************************************************************* */
     @PostMapping("/noticeBoard_list")
@@ -1471,8 +1508,16 @@ public class SysController {
                     Map param = new HashMap();
                     param.put("list1", divde_D);
                     param.put("userId", userInfo.getName());
-                    int rtn1 = sysService.deleteQry("sys5030_fav_delete", param);
-                    System.out.println("=====>>>  " + rtn1);
+                    int rtnD = sysService.deleteQry("sys5030_fav_delete", param);
+                    if (rtnD > 0) {
+                        if (rtn == "0") {
+                            rtn = "0";
+                        } else {
+                            rtn = "1";
+                        }
+                    } else {
+                        rtn = "1";
+                    }
                     divde = divde_D;
                 }
 
@@ -1480,7 +1525,16 @@ public class SysController {
                     Map param = new HashMap();
                     param.put("list1", divde_I);
                     param.put("userId", userInfo.getName());
-                    sysService.insertQry("sys5030_fav_insert", param);
+                    int rtnI = sysService.insertQry("sys5030_fav_insert", param);
+                    if (rtnI > 0) {
+                        if (rtn == "0") {
+                            rtn = "0";
+                        } else {
+                            rtn = "1";
+                        }
+                    } else {
+                        rtn = "1";
+                    }
                     divde = divde_I;
                 }
 
@@ -1488,17 +1542,37 @@ public class SysController {
                     Map param = new HashMap();
                     param.put("list1", divde_U);
                     param.put("userId", userInfo.getName());
-                    sysService.updateQry("sys5030_fav_update", param);
+                    int rtnU = sysService.updateQry("sys5030_fav_update", param);
+                    if (rtnU > 0) {
+                        if (rtn == "0") {
+                            rtn = "0";
+                        } else {
+                            rtn = "1";
+                        }
+                    } else {
+                        rtn = "1";
+                    }
                     divde = divde_U;
                 }
             }
-            transactionManager.commit(status);
+            if (rtn == "0") {
+                rtnMsg = "정상 처리되었습니다.";
+                transactionManager.commit(status);
+            } else {
+                rtnMsg = "비정상 처리되었습니다.";
+                transactionManager.rollback(status);
+            }
         } catch (Exception e) {
             transactionManager.rollback(status);
-            rtn = "1";
-            e.printStackTrace();
+            rtn = "3";
+            if (e.getCause() instanceof SQLException sqlException) {
+                rtnMsg = "처리실패 : " + sqlException.getMessage();  // Get the specific error message from SQLException
+            } else {
+                rtnMsg = "예상치 못한 오류가 발생했습니다.";
+            }
         }
         map.put("rtn", rtn);
+        map.put("rtnMsg", rtnMsg);
         map.put("data", divde);
         jsonDataRtn = jsonUtil.getToJson(map).replaceAll("null", "\"\"");
 

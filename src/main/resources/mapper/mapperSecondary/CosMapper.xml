@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.iszion.api.cos.dao.CosDAO">
+
+
+    <!-- ###  손익분기 도서 수량처리부분    ### -->
+    <select id="cos1010_list" resultType="java.util.HashMap">
+        SELECT
+                  mp.PROD_CD      	as  prodCd
+                , mp.PROD_NM      	as  prodNm
+                , IFNULL(wq.QTY, 0) as  qty
+                , wq.REMARKS      	as  remarks
+                , IF(wq.PROD_CD != '', 'R', '')	as  iuD
+            FROM MPRODTB as mp
+                -- 손익분기수량 테이블
+                left outer join WCOSQTB as wq ON wq.PROD_CD  = mp.PROD_CD
+
+            WHERE mp.USE_YN != 'Y'
+            ORDER BY mp.PROD_CD
+    </select>
+
+    <insert id="cos1010_insert" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            INSERT INTO WCOSQTB
+                (
+                      PROD_CD
+                    , QTY
+                    , REMARKS
+                    , REG_DATE
+                    , REG_ID
+                    , UPDATE_DATE
+                    , UPDATE_ID
+                ) VALUES (
+                      #{item.prodCd }
+                    , #{item.qty }
+                    , #{item.remarks }
+                    , now()
+                    , #{userId}
+                    , now()
+                    , #{userId}
+                )
+        </foreach>
+    </insert>
+
+    <update id="cos1010_update" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            UPDATE WCOSQTB
+                SET
+                      QTY           =   #{item.qty }
+                    , REMARKS       =   #{item.remarks }
+                    , UPDATE_DATE   =   now()
+                    , UPDATE_ID     =   #{userId }
+
+                WHERE PROD_CD   =   #{item.prodCd}
+        </foreach>
+    </update>
+
+    <delete id="cos1010_delete" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            DELETE FROM WCOSQTB
+            WHERE PROD_CD   =   #{item.prodCd}
+        </foreach>
+    </delete>
+
+
+</mapper>

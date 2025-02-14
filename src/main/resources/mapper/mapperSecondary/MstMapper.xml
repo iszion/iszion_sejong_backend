@@ -97,206 +97,6 @@
 
     </select>
 
-    <!--    기준인사정보 list -->
-    <select id="mst1010_list" resultType="java.util.HashMap">
-        SELECT
-              e.EMP_CD          as  empCd
-            , e.EMP_CD          as  oldEmpCd
-            , e.EMP_NM          as  empNm
-            , e.DEPT_CD         as  deptCd
-            , c1.COMM_NM 		as	deptNm
-            , e.PSTN_CD         as  pstnCd
-            , c2.COMM_NM 		as	pstnNm
-            , e.TITL_CD         as  titlCd
-            , c3.COMM_NM 		as	titlNm
-            , e.BIRTHDAY        as  birthday
-            , e.IN_DAY          as  inDay
-            , e.OUT_DAY         as  outDay
-            , e.MOBILE          as  mobile
-            , e.EMAIL           as  email
-            , e.EDU_LEVEL       as  eduLevel
-            , e.FINAL_SCHOOL    as  finalSchool
-            , e.EXPLAINS        as  explains
-            , e.REG_DATE        as  regDate
-            , e.REG_ID          as  regId
-            , e.UPDATE_DATE     as  updateDate
-            , e.UPDATE_ID       as  updateId
-            , e.IMAGE_FILE_NM   as  imageFileNm
-            , e.IMAGE_FILE_NM_FULL as imageFileNmFull
-            , e.SIGN_FILE_NM   as  signFileNm
-            , e.SIGN_FILE_NM_FULL as signFileNmFull
-        FROM HEMPTB e
-            left join db_izbook.XCOMMTB c1 ON c1.COMM_CD = e.DEPT_CD
-            left join db_izbook.XCOMMTB c2 ON c2.COMM_CD = e.PSTN_CD
-            left join db_izbook.XCOMMTB c3 ON c3.COMM_CD = e.TITL_CD
-        WHERE 1=1
-        <if test='paramDeptCd != null and paramDeptCd != ""'>
-            AND e.DEPT_CD = #{paramDeptCd}
-        </if>
-        <if test='paramSearchWord != null and paramSearchWord != ""'>
-            AND (
-                    e.EMP_NM LIKE CONCAT('%', #{paramSearchWord}, '%')
-                OR  e.EMP_CD LIKE CONCAT('%', #{paramSearchWord}, '%')
-                )
-        </if>
-        ORDER by e.DEPT_CD asc, e.PSTN_CD asc
-    </select>
-
-    <select id="mst1010_select" resultType="java.util.HashMap">
-        SELECT
-              e.EMP_CD          as  empCd
-            , e.PASSWD          as  passwd
-            , e.EMP_CD          as  oldEmpCd
-            , e.EMP_NM          as  empNm
-            , e.DEPT_CD         as  deptCd
-            , c1.COMM_NM		as	deptNm
-            , e.PSTN_CD         as  pstnCd
-            , c2.COMM_NM        as  pstnNm
-            , e.TITL_CD         as  titlCd
-            , c3.COMM_NM        as  titlNm
-            , e.BIRTHDAY        as  birthday
-            , e.IN_DAY          as  inDay
-            , e.OUT_DAY         as  outDay
-            , e.MOBILE          as  mobile
-            , e.EMAIL           as  email
-            , e.EDU_LEVEL       as  eduLevel
-            , e.FINAL_SCHOOL    as  finalSchool
-            , e.EXPLAINS        as  explains
-            , e.REG_DATE        as  regDate
-            , e.REG_ID          as  regId
-            , e.UPDATE_DATE     as  updateDate
-            , e.UPDATE_ID       as  updateId
-            , e.IMAGE_FILE_NM   as  imageFileNm
-            , e.IMAGE_FILE_NM_FULL as imageFileNmFull
-            , e.SIGN_FILE_NM    as  signFileNm
-            , e.SIGN_FILE_NM_FULL   as signFileNmFull
-        FROM HEMPTB e
-                 left join db_izbook.XCOMMTB c1 ON c1.COMM_CD = e.DEPT_CD
-                 left join db_izbook.XCOMMTB c2 ON c2.COMM_CD = e.PSTN_CD
-                 left join db_izbook.XCOMMTB c3 ON c3.COMM_CD = e.TITL_CD
-        where 1=1
-          AND e.EMP_CD      =   #{ paramEmpCd }
-    </select>
-
-
-    <insert id="mst1010_insert" parameterType="java.util.Map">
-        <foreach collection="list1" item="item" separator=";">
-            INSERT INTO HEMPTB
-                (
-                      EMP_CD
-                    , PASSWD
-                    , EMP_NM
-                    , DEPT_CD
-                    , PSTN_CD
-                    , TITL_CD
-                    , BIRTHDAY
-                    , IN_DAY
-                    , OUT_DAY
-                    , MOBILE
-                    , EMAIL
-                    , EDU_LEVEL
-                    , FINAL_SCHOOL
-                    , IMAGE_FILE_NM
-                    , IMAGE_FILE_NM_FULL
-                    , SIGN_FILE_NM
-                    , SIGN_FILE_NM_FULL
-                    , EXPLAINS
-                    , REG_DATE
-                    , REG_ID
-                    , UPDATE_DATE
-                    , UPDATE_ID
-                ) VALUES (
-                      #{item.empCd}
-                    , #{item.passwd}
-                    , #{item.empNm}
-                    , #{item.deptCd}
-                    , #{item.pstnCd}
-                    , #{item.titlCd}
-                    , #{item.birthday}
-                    , #{item.inDay}
-                    , #{item.outDay}
-                    , #{item.mobile}
-                    , #{item.email}
-                    , #{item.eduLevel}
-                    , #{item.finalSchool}
-                    , null
-                    , null
-                    , null
-                    , null
-                    ,  #{item.explains}
-                    , NOW()
-                    , #{userId}
-                    , NOW()
-                    , #{userId}
-                )
-        </foreach>
-    </insert>
-
-    <update id="mst1010_fileSave" parameterType="java.util.Map">
-        UPDATE HEMPTB SET
-            IMAGE_FILE_NM = #{IMAGE_FILE_NM}
-        ,   IMAGE_FILE_NM_FULL = #{IMAGE_FILE_NM_FULL}
-        WHERE EMP_CD = #{empCd}
-
-    </update>
-
-
-    <delete id="mst1010_fileDelete" parameterType="java.util.Map">
-        UPDATE HEMPTB SET
-              IMAGE_FILE_NM = null
-            , IMAGE_FILE_NM_FULL = null
-        WHERE EMP_CD = #{empCd}
-    </delete>
-
-
-    <update id="mst1010_fileSave_sign" parameterType="java.util.Map">
-        UPDATE HEMPTB
-            SET
-                SIGN_FILE_NM = #{SIGN_FILE_NM}
-            ,   SIGN_FILE_NM_FULL = #{SIGN_FILE_NM_FULL}
-        WHERE EMP_CD = #{empCd}
-
-    </update>
-
-
-    <delete id="mst1010_fileDelete_sign" parameterType="java.util.Map">
-        UPDATE HEMPTB
-            SET
-                SIGN_FILE_NM = null
-            ,   SIGN_FILE_NM_FULL = null
-        WHERE EMP_CD = #{empCd}
-    </delete>
-
-
-    <update id="mst1010_update" parameterType="java.util.Map">
-        <foreach collection="list1" item="item" separator=";">
-            UPDATE HEMPTB
-                SET
-                      EMP_CD        =   #{item.empCd}
-                    , EMP_NM        =   #{item.empNm}
-                    , DEPT_CD       =   #{item.deptCd}
-                    , PSTN_CD       =   #{item.pstnCd}
-                    , TITL_CD       =   #{item.titlCd}
-                    , BIRTHDAY      =   #{item.birthday}
-                    , IN_DAY        =   #{item.inDay}
-                    , OUT_DAY       =   #{item.outDay}
-                    , MOBILE        =   #{item.mobile}
-                    , EMAIL         =   #{item.email}
-                    , EDU_LEVEL     =   #{item.eduLevel}
-                    , FINAL_SCHOOL  =   #{item.finalSchool}
-                    , EXPLAINS      =   #{item.explains}
-                    , UPDATE_DATE   =   NOW()
-                    , UPDATE_ID     =   #{userId}
-                WHERE EMP_CD        =   #{item.oldEmpCd}
-        </foreach>
-    </update>
-
-    <delete id="mst1010_delete" parameterType="java.util.Map">
-        <foreach collection="list1" item="item" separator=";">
-            DELETE FROM HEMPTB
-            WHERE EMP_CD       =   #{item.empCd}
-        </foreach>
-    </delete>
 
 
     <!-- ###  도서정보 불러오기 list    ################################ -->
@@ -310,6 +110,12 @@
         </if>
         <if test='paramProdFg != null and paramProdFg != ""'>
             AND d.PROD_FG = #{paramProdFg }
+        </if>
+        <if test='paramUseYn == "Y"'>
+            AND d.USE_YN = 'Y'
+        </if>
+        <if test='paramUseYn == "N"'>
+            AND d.USE_YN != 'Y'
         </if>
         <if test='paramSearchValue != null and paramSearchValue != ""'>
             AND (
@@ -372,6 +178,12 @@
         </if>
         <if test='paramProdFg != null and paramProdFg != ""'>
             AND d.PROD_FG = #{paramProdFg }
+        </if>
+        <if test='paramUseYn == "Y"'>
+            AND d.USE_YN = 'Y'
+        </if>
+        <if test='paramUseYn == "N"'>
+            AND d.USE_YN != 'Y'
         </if>
         <if test='paramSearchValue != null and paramSearchValue != ""'>
             AND (
