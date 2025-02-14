@@ -96,4 +96,18 @@
 
     </delete>
 
+    <select id="getUserInfo" resultType="java.util.HashMap">
+        /**
+          Mapper:AuthMapper.getUserId
+         */
+        SELECT u.USER_ID
+             , u.USER_NM
+             , u.PASSWD
+             , u.ROLE
+             , xco.DATABASE
+        FROM XUSERTB u
+                 left join XCOMPTB xco ON xco.COMP_CD = u.COMP_CD
+        WHERE u.USER_ID = #{userId}
+    </select>
+
 </mapper>

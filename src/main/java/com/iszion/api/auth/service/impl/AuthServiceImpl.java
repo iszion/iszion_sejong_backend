@@ -7,12 +7,17 @@ import com.iszion.api.auth.dto.response.UserResponseDto;
 import com.iszion.api.auth.mapper.AuthMapper;
 import com.iszion.api.auth.service.AuthService;
 import com.iszion.api.aux.controller.AuxController;
+import com.iszion.api.config.DynamicDataSourceConfig;
+import com.iszion.api.config.DynamicRoutingDataSource;
 import com.iszion.api.config.jwt.JwtTokenProvider;
+import com.zaxxer.hikari.HikariDataSource;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +30,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.ObjectUtils;
 
+import javax.sql.DataSource;
 import java.util.HashMap;
 
 @Service
@@ -38,6 +44,18 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthenticationManagerBuilder authenticationManagerBuilder;
+
+    @Autowired
+    private DynamicDataSourceConfig dynamicDataSourceConfig;
+
+    @Value("${spring.secondary.datasource.username}")
+    private String defaultUsername;
+
+    @Value("${spring.secondary.datasource.password}")
+    private String defaultPassword;
+
+    @Value("${spring.secondary.datasource.driver-class-name}")
+    private String defaultDriverClassName;
     private static final Logger LOGGER = LoggerFactory.getLogger(AuxController.class);
 
     public final static long TOKEN_EXPIRATION_TIME = 1000 * 60 * 60 * 5; // 5시간
@@ -94,12 +112,12 @@ public class AuthServiceImpl implements AuthService {
 
             int tokenSave = authMapper.tokenSave(userId, accessToken, refreshToken);
 
-//            String dbName = "db_sej";
+            HashMap userInfo = authMapper.getUserInfo(userId);
 
-            // 동적 데이터소스 설정
-//            DynamicDataSourceContextHolder.setDataSource(dbName);
-//            DynamicRoutingDataSource.setDatabase(dbName);
-//            TransactionSynchronizationManager.clearSynchronization();
+            String dbName = (String) userInfo.get("DATABASE");
+            //DynamicRoutingDataSource.setDataSource(dbName);
+
+
 
             return response.success(tokenInfo, "로그인에 성공했습니다.", HttpStatus.OK);
         } catch (AuthenticationException e) {
@@ -185,5 +203,17 @@ public class AuthServiceImpl implements AuthService {
             return response.fail("새로운 토큰 발행 실패", HttpStatus.BAD_REQUEST);
         }
 
+    }
+
+    private DataSource createDataSource(String dbName) {
+        HikariDataSource dataSource = new HikariDataSource();
+
+        // DB명에 따라 JDBC URL 동적으로 설정
+        String jdbcUrl = "jdbc:log4jdbc:mariadb://125.250.69.237:60004/" + dbName + "?allowMultiQueries=true";  // DB 이름에 따라 URL 설정
+        dataSource.setJdbcUrl(jdbcUrl);
+        dataSource.setUsername(defaultUsername);
+        dataSource.setPassword(defaultPassword);
+        dataSource.setDriverClassName(defaultDriverClassName);
+        return dataSource;
     }
 }

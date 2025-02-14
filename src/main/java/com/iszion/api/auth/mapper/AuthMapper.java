@@ -25,4 +25,6 @@ public interface AuthMapper {
     HashMap<String, Object> getRefreshToken(String userId);
 
     HashMap<String, Object> getAccessToken(String accessToken);
+
+    HashMap<String, Object> getUserInfo(String userId);
 }

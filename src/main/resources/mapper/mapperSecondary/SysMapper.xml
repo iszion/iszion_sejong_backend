@@ -62,7 +62,6 @@
              left join XDOCUTB du ON db.PROG_ID = a.PROG_ID
              left join db_izbook.XGRNTPTB gp ON gp.COMP_CD = #{paramCompCd}  AND gp.PROG_ID = a.PROG_ID  AND gp.USER_ID = #{paramUserId}
         WHERE 1=1
-          AND a.COMP_CD     =   #{ paramCompCd }
           AND a.LOCATION    =   #{ paramGroupCd }
           AND (#{paramUserId} = 'admin' OR (gp.SCR_YN = 'Y' OR a.MENU_PARENT = '#'))
         ORDER BY a.SEQ
