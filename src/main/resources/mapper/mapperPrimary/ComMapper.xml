@@ -71,8 +71,8 @@
 
     <select id="passwordCheck" resultType="java.util.HashMap">
         SELECT
-            USER_NM
-             ,       PASSWD
+                USER_NM
+             ,  PASSWD
         FROM XUSERTB
         WHERE USER_ID = #{paramUserId}
     </select>

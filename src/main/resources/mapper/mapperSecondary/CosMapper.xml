@@ -8,7 +8,7 @@
         SELECT
                   mp.PROD_CD      	as  prodCd
                 , mp.PROD_NM      	as  prodNm
-                , IFNULL(wq.QTY, 0) as  qty
+                , IFNULL(wq.LIMIT_QTY, 0) as  limitQty
                 , wq.REMARKS      	as  remarks
                 , IF(wq.PROD_CD != '', 'R', '')	as  iuD
             FROM MPRODTB as mp
@@ -16,6 +16,13 @@
                 left outer join WCOSQTB as wq ON wq.PROD_CD  = mp.PROD_CD
 
             WHERE mp.USE_YN != 'Y'
+            <if test='paramValue != null and paramValue != ""'>
+                AND ( mp.PROD_NM LIKE CONCAT( '%', #{paramValue }, '%' )
+                OR  mp.PROD_CD LIKE CONCAT( '%', #{paramValue }, '%')
+                OR  wq.REMARKS LIKE CONCAT( '%', #{paramValue }, '%')
+                )
+            </if>
+
             ORDER BY mp.PROD_CD
     </select>
 
@@ -24,7 +31,7 @@
             INSERT INTO WCOSQTB
                 (
                       PROD_CD
-                    , QTY
+                    , LIMIT_QTY
                     , REMARKS
                     , REG_DATE
                     , REG_ID
@@ -32,7 +39,7 @@
                     , UPDATE_ID
                 ) VALUES (
                       #{item.prodCd }
-                    , #{item.qty }
+                    , #{item.limitQty }
                     , #{item.remarks }
                     , now()
                     , #{userId}
@@ -46,7 +53,7 @@
         <foreach collection="list1" item="item" separator=";">
             UPDATE WCOSQTB
                 SET
-                      QTY           =   #{item.qty }
+                      LIMIT_QTY     =   #{item.limitQty }
                     , REMARKS       =   #{item.remarks }
                     , UPDATE_DATE   =   now()
                     , UPDATE_ID     =   #{userId }
@@ -61,6 +68,207 @@
             WHERE PROD_CD   =   #{item.prodCd}
         </foreach>
     </delete>
+
+
+
+    <!-- ###  제작비용 일괄등록 처리부분    ### -->
+    <select id="cos1020_list" resultType="java.util.HashMap">
+        SELECT
+               wo.MAKE_DAY      as  makeDay
+             , wo.MAKE_DAY    	as 	oldMakeDay
+             , wo.PROD_CD      	as 	prodCd
+             , wo.PROD_CD      	as 	oldProdCd
+             , mp.PROD_NM      	as 	prodNm
+             , wo.TRANS_AMT 	as  transAmt
+             , wo.EXP_AMT       as  expAmt
+             , wo.PAPER_AMT     as  paperAmt
+             , wo.PRINT_AMT     as  printAmt
+             , wo.OTHER_AMT     as  otherAmt
+             , wo.REMARKS       as  REMARKS
+             , 'R'              as  iuD
+        FROM WCOSOTB as wo
+                 -- 도서코드
+                 left outer join MPRODTB as mp ON mp.PROD_CD  = wo.PROD_CD
+
+        WHERE left(wo.MAKE_DAY, 4) 	=  #{paramYear }
+            <if test='paramValue != null and paramValue != ""'>
+                AND ( wo.MAKE_DAY LIKE CONCAT( '%', #{paramValue }, '%' )
+                OR  mp.PROD_NM LIKE CONCAT( '%', #{paramValue }, '%' )
+                OR  wo.PROD_CD LIKE CONCAT( '%', #{paramValue }, '%')
+                OR  wo.REMARKS LIKE CONCAT( '%', #{paramValue }, '%')
+                )
+            </if>
+    </select>
+
+    <insert id="cos1020_insert" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            INSERT INTO WCOSOTB
+                (
+                      MAKE_DAY
+                    , PROD_CD
+                    , TRANS_AMT
+                    , EXP_AMT
+                    , PAPER_AMT
+                    , PRINT_AMT
+                    , OTHER_AMT
+                    , REMARKS
+                    , REG_DATE
+                    , REG_ID
+                    , UPDATE_DATE
+                    , UPDATE_ID
+                ) VALUES (
+                      #{item.makeDay }
+                    , #{item.prodCd }
+                    , #{item.transAmt }
+                    , #{item.expAmt }
+                    , #{item.paperAmt }
+                    , #{item.printAmt }
+                    , #{item.otherAmt }
+                    , #{item.remarks }
+                    , now()
+                    , #{userId}
+                    , now()
+                    , #{userId}
+                )
+        </foreach>
+    </insert>
+
+    <update id="cos1020_update" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            UPDATE WCOSOTB
+                SET
+                      MAKE_DAY      =   #{item.makeDay }
+                    , PROD_CD       =   #{item.prodCd }
+                    , TRANS_AMT     =   #{item.transAmt }
+                    , EXP_AMT       =   #{item.expAmt }
+                    , PAPER_AMT     =   #{item.paperAmt }
+                    , PRINT_AMT     =   #{item.printAmt }
+                    , OTHER_AMT     =   #{item.otherAmt }
+                    , REMARKS       =   #{item.remarks }
+                    , UPDATE_DATE   =   now()
+                    , UPDATE_ID     =   #{userId }
+
+                WHERE MAKE_DAY      =   #{item.oldMakeDay}
+                  AND PROD_CD       =   #{item.oldProdCd}
+        </foreach>
+    </update>
+
+    <delete id="cos1020_delete" parameterType="java.util.Map">
+        <foreach collection="list1" item="item" separator=";">
+            DELETE FROM WCOSOTB
+            WHERE MAKE_DAY      =   #{item.oldMakeDay}
+              AND PROD_CD       =   #{item.oldProdCd}
+        </foreach>
+    </delete>
+
+
+    <!-- ###  도서별 제작비용 등록 처리부분    ### -->
+    <select id="cos1030_list" resultType="java.util.HashMap">
+        SELECT
+                  mp.PROD_CD    as  prodCd
+                , mp.PROD_NM    as  prodNm
+                , mp.AUTHOR_NM  as  authorNm
+                , if(wo.PROD_CD != '', 'Y', 'N')  as chYn
+            FROM MPRODTB as mp
+                -- 제작비용check
+                left outer join WCOSOTB as wo ON wo.PROD_CD = mp.PROD_CD
+            WHERE mp.USE_YN != 'Y'
+                <if test='paramChYn == "N"'>
+                    AND  wo.PROD_CD is not null
+                </if>
+                <if test='paramValue != null and paramValue != ""'>
+                    AND ( mp.PROD_NM LIKE CONCAT( '%', #{paramValue }, '%' )
+                    OR  mp.PROD_CD LIKE CONCAT( '%', #{paramValue }, '%')
+                    OR  wo.REMARKS LIKE CONCAT( '%', #{paramValue }, '%')
+                    )
+                </if>
+    </select>
+
+    <select id="cos1030_selected_list" resultType="java.util.HashMap">
+        SELECT
+              wo.MAKE_DAY       as  makeDay
+            , wo.MAKE_DAY    	as 	oldMakeDay
+            , wo.PROD_CD      	as 	prodCd
+            , wo.PROD_CD      	as 	oldProdCd
+            , mp.PROD_NM      	as 	prodNm
+            , wo.TRANS_AMT 	    as  transAmt
+            , wo.EXP_AMT        as  expAmt
+            , wo.PAPER_AMT      as  paperAmt
+            , wo.PRINT_AMT      as  printAmt
+            , wo.OTHER_AMT      as  otherAmt
+            , wo.REMARKS        as  REMARKS
+            , 'R'               as  iuD
+        FROM WCOSOTB as wo
+        -- 도서코드
+        left outer join MPRODTB as mp ON mp.PROD_CD  = wo.PROD_CD
+
+        WHERE wo.PROD_CD    =   #{paramProdCd }
+    </select>
+
+    <!-- ###  도서 손익분기표    ### -->
+    <select id="cos4010_list" resultType="java.util.HashMap">
+        SELECT
+               c1.pub_year           as  pubYear
+             , (case when c1.pub_year is not null then max(c1.pub_day) else '총계' end)  as pubDay
+             , c1.prod_cd            as  prodCd
+             , (case when c1.prod_cd is not null then max(c1.prod_nm) else '합계' end)    as prodNm
+             , c1.author_nm          as  authorNm
+             , c1.sun_nm             as  sunNm
+             , c1.agent_nm           as  agentNm
+             , sum(c1.w_amt)         as  wAmt
+             , sum(c1.ws_amt)        as  wsAmt
+             , sum(c1.trans_amt)  	as  transAmt
+             , sum(c1.exp_amt)       as  expAmt
+             , sum(c1.paper_amt)     as  paperAmt
+             , sum(c1.print_amt)     as  printAmt
+             , sum(c1.other_amt)     as  otherAmt
+             , sum(c1.prod_qty)      as  prodQty
+             , sum(c1.limit_qty)     as  limitQty
+             , sum(c1.deal_qty)      as  dealQty
+             , sum(c1.deal_amt)     	as  dealAmt
+
+             , sum(c1.w_amt) + sum(c1.ws_amt) + sum(c1.trans_amt) + sum(c1.exp_amt) + sum(c1.paper_amt) + sum(c1.print_amt)                                       	as  itAmt    -- 순 출간비용
+             , sum(c1.w_amt) + sum(c1.ws_amt) + sum(c1.trans_amt) + sum(c1.exp_amt) + sum(c1.paper_amt) + sum(c1.print_amt) + sum(c1.other_amt)                   	as  ittAmt   -- 총제작비용
+             , sum(c1.deal_amt) - (sum(c1.w_amt) + sum(c1.ws_amt) + sum(c1.trans_amt) + sum(c1.exp_amt) + sum(c1.paper_amt) + sum(c1.print_amt))                     	as  cos1Amt  -- 순출간비용손익
+             , sum(c1.deal_amt) - (sum(c1.w_amt) + sum(c1.ws_amt) + sum(c1.trans_amt) + sum(c1.exp_amt) + sum(c1.paper_amt) + sum(c1.print_amt) + sum(c1.other_amt)) 	as  cos2Amt  -- 순이익(판관비포함)
+
+             , '' as    remarks
+
+        FROM  (
+                  SELECT
+                            left(mp.PUB_DAY, 4)        	    as  pub_year
+                          , mp.PUB_DAY                	    as  PUB_DAY
+                          , wt.PROD_CD                  	as  PROD_CD
+                          , mp.PROD_NM                 	    as  PROD_NM
+                          , mp.AUTHOR_NM              	    as  author_nm
+                          , mp.SUN_NM                  	    as  sun_nm
+                          , ag.AGENT_NM                	    as  agent_nm
+                          , wt.W_AMT                    	as  w_amt
+                          , wt.WS_AMT                   	as  ws_amt
+                          , wt.TRANS_AMT            		as  trans_amt
+                          , wt.EXP_AMT                  	as  exp_amt
+                          , wt.PAPER_AMT                	as  paper_amt
+                          , wt.PRINT_AMT                	as  print_amt
+                          , wt.OTHER_AMT               	    as  other_amt
+                          , wt.PROD_QTY                  	as  prod_qty
+                          , wt.LIMIT_QTY                 	as  limit_qty
+                          , wt.DEAL_QTY                  	as  deal_qty
+                          , wt.DEAL_AMT                  	as  deal_amt
+                  FROM WCOSTTB wt
+                      left join MPRODTB mp  ON mp.PROD_CD = wt.PROD_CD
+                      left join MAGENTTB ag ON ag.AGENT_CD = mp.AGENT_CD   -- 에이젠시
+
+                  where 1=1
+                    and wt.COS_YEAR     =   #{paramYear }
+                    AND wt.COS_MONTH    =   #{paramMonth }
+              ) c1
+
+        WHERE 1=1
+        GROUP BY c1.pub_year, c1.prod_cd  WITH ROLLUP
+
+
+
+    </select>
 
 
 </mapper>

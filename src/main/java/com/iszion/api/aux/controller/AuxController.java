@@ -56,7 +56,7 @@ public class AuxController {
     private String DB_PASSWORD;
 
     /* *******************************************************************************
-     ** 인세계산 작업
+     ** 전체자료정리 작업
      ** ******************************************************************************* */
     @PostMapping("/aux1010_procedure")
     public String aux1010_procedure(HttpServletRequest request, @RequestHeader("Authorization") String token) throws Exception {
