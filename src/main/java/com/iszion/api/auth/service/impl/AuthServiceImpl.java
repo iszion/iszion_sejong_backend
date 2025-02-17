@@ -7,13 +7,15 @@ import com.iszion.api.auth.dto.response.UserResponseDto;
 import com.iszion.api.auth.mapper.AuthMapper;
 import com.iszion.api.auth.service.AuthService;
 import com.iszion.api.aux.controller.AuxController;
+import com.iszion.api.config.DynamicDataSource;
 import com.iszion.api.config.jwt.JwtTokenProvider;
+import com.zaxxer.hikari.HikariDataSource;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -25,6 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.ObjectUtils;
 
+import javax.sql.DataSource;
 import java.util.HashMap;
 
 @Service
@@ -38,6 +41,17 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthenticationManagerBuilder authenticationManagerBuilder;
+
+    private final DynamicDataSource dynamicDataSource;
+
+    @Value("${spring.secondary.datasource.username}")
+    private String defaultUsername;
+
+    @Value("${spring.secondary.datasource.password}")
+    private String defaultPassword;
+
+    @Value("${spring.secondary.datasource.driver-class-name}")
+    private String defaultDriverClassName;
     private static final Logger LOGGER = LoggerFactory.getLogger(AuxController.class);
 
     public final static long TOKEN_EXPIRATION_TIME = 1000 * 60 * 60 * 5; // 5시간
@@ -77,7 +91,7 @@ public class AuthServiceImpl implements AuthService {
             if (valid == 0) {
                 return response.fail("해당하는 유저가 존재하지 않습니다.", HttpStatus.BAD_REQUEST);
             }
-
+            DynamicDataSource.clear();
             // 1. Login ID/PW 를 기반으로 Authentication 객체 생성
             // 이때 authentication 는 인증 여부를 확인하는 authenticated 값이 false
             UsernamePasswordAuthenticationToken authenticationToken = login.toAuthentication();
@@ -93,17 +107,18 @@ public class AuthServiceImpl implements AuthService {
             String refreshToken = tokenInfo.getRefreshToken();
 
             int tokenSave = authMapper.tokenSave(userId, accessToken, refreshToken);
+            HashMap userInfo = authMapper.getUserInfo(userId);
 
-//            String dbName = "db_sej";
+            String dbName = (String) userInfo.get("DATABASE");
+            //DynamicRoutingDataSource.setDataSource(dbName);
 
-            // 동적 데이터소스 설정
-//            DynamicDataSourceContextHolder.setDataSource(dbName);
-//            DynamicRoutingDataSource.setDatabase(dbName);
-//            TransactionSynchronizationManager.clearSynchronization();
+            DataSource dataSource = dynamicDataSource.getOrCreateDataSource(dbName);
+            DynamicDataSource.setCurrentDb(dbName);
 
             return response.success(tokenInfo, "로그인에 성공했습니다.", HttpStatus.OK);
         } catch (AuthenticationException e) {
             System.out.println("인증 실패 : " + e.getMessage());
+            DynamicDataSource.clear();
             return response.fail("로그인에 실패했습니다..", HttpStatus.BAD_REQUEST);
 
         }
@@ -185,5 +200,17 @@ public class AuthServiceImpl implements AuthService {
             return response.fail("새로운 토큰 발행 실패", HttpStatus.BAD_REQUEST);
         }
 
+    }
+
+    private DataSource createDataSource(String dbName) {
+        HikariDataSource dataSource = new HikariDataSource();
+
+        // DB명에 따라 JDBC URL 동적으로 설정
+        String jdbcUrl = "jdbc:log4jdbc:mariadb://125.250.69.237:60004/" + dbName + "?allowMultiQueries=true";  // DB 이름에 따라 URL 설정
+        dataSource.setJdbcUrl(jdbcUrl);
+        dataSource.setUsername(defaultUsername);
+        dataSource.setPassword(defaultPassword);
+        dataSource.setDriverClassName(defaultDriverClassName);
+        return dataSource;
     }
 }
