@@ -30,7 +30,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -53,6 +53,12 @@ public class ComController {
     @Value("${file.upload.folder}")
     private String UPLOAD_DIR;
 
+    @Value("${spring.primary.datasource.url}")
+    private String DB_URL;
+    @Value("${spring.primary.datasource.username}")
+    private String DB_USERID;
+    @Value("${spring.primary.datasource.password}")
+    private String DB_PASSWORD;
 
 
 
@@ -668,6 +674,72 @@ public class ComController {
         return jsonDataRtn;
     }
 
+
+    /* *******************************************************************************
+     ** 데이타베이스 생성 부분
+     ** ******************************************************************************* */
+    @PostMapping("/com1010_create_database_procedure")
+    public String com1010_create_database_procedure(HttpServletRequest request, @RequestHeader("Authorization") String token) throws Exception {
+        String accessToken = token.substring(7);
+        Authentication userInfo = jwtTokenProvider.getAuthentication(accessToken);
+        String userId = userInfo.getName();
+
+        RequestUtil reqUtil = new RequestUtil();
+        String jsonData = reqUtil.getBody(request);
+        JsonUtils jsonUtil = new JsonUtils();
+        Map<String, Object> reqParam = jsonUtil.jsonStringToMap(jsonData);
+        String pDatabase = (String) reqParam.get("paramDatabase");
+
+        String jsonDataRtn = "";
+        String rtn = "0";
+        String rtnMsg = "";
+        Map<String, Object> map = new HashMap();
+
+        boolean result = false;
+        try {
+            Connection con = null;
+            CallableStatement cs = null;
+            // 연결
+//            con = DriverManager.getConnection(url, id, pw);
+            con = DriverManager.getConnection(DB_URL, DB_USERID, DB_PASSWORD);
+
+            // 프로시저 호출
+            cs = con.prepareCall("{call PROC_DATABASE_CREATE(?, ?, ?)}");
+
+            // 입력 파라미터 설정
+            cs.setString(1, pDatabase);
+            cs.setString(2, userId);
+            // 출력 파라미터 설정
+            cs.registerOutParameter(3, Types.BOOLEAN);
+
+            // 실행
+            cs.execute();
+            // 출력 파라미터 값 가져오기
+            result = cs.getBoolean(3);
+
+            System.out.println("Procedure executed successfully :: " + result);
+            rtn = "0";
+            rtnMsg = "정상적으로 처리되었습니다";
+            cs.close();
+            con.close();
+        } catch (Exception e) {
+            rtn = "3";
+            if (e.getCause() instanceof SQLException sqlException) {
+                rtnMsg = "처리실패 : " + sqlException.getMessage();  // Get the specific error message from SQLException
+            } else {
+                rtnMsg = "예상치 못한 오류가 발생했습니다.";
+            }
+        }
+        if(result) {
+            rtn = "0";
+        } else {
+            rtn = "1";
+        }
+        map.put("rtn", rtn);
+        map.put("rtnMsg", rtnMsg);
+        jsonDataRtn = jsonUtil.getToJson(map).replaceAll("null", "\"\"");
+        return jsonDataRtn;
+    }
 
     /* *******************************************************************************
      ** 사원정보 처리부분 부분
