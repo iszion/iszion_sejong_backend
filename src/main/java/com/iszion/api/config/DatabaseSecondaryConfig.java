@@ -1,3 +1,4 @@
+/*
 package com.iszion.api.config;
 
 import com.zaxxer.hikari.HikariDataSource;
@@ -84,3 +85,4 @@ public class DatabaseSecondaryConfig {
 
 
 }
+*/
