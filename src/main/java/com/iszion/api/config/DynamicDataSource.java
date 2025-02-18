@@ -59,8 +59,8 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
         String jdbcUrl = "jdbc:log4jdbc:mariadb://125.250.69.237:60004/" + dbName + "?allowMultiQueries=true";
         HikariConfig config = new HikariConfig();
         config.setJdbcUrl(jdbcUrl);
-        config.setUsername("iszion");
-        config.setPassword("iszion1347#*");
+        config.setUsername("izbook");
+        config.setPassword("iz13474351**");
         config.setDriverClassName("net.sf.log4jdbc.sql.jdbcapi.DriverSpy");
         return new HikariDataSource(config);
     }

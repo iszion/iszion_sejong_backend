@@ -24,13 +24,13 @@ public class DataSourceConfig {
     @Value("${spring.secondary.datasource.url}")
     private String url;
 
-    @Value("${spring.primary.datasource.username}")
+    @Value("${spring.secondary.datasource.username}")
     private String username;
 
-    @Value("${spring.primary.datasource.password}")
+    @Value("${spring.secondary.datasource.password}")
     private String password;
 
-    @Value("${spring.primary.datasource.driver-class-name}")
+    @Value("${spring.secondary.datasource.driver-class-name}")
     private String driverClassName;
 
     @Bean(name = "defaultDataSource")
@@ -65,6 +65,11 @@ public class DataSourceConfig {
     @Bean(name = "secondarySqlSessionTemplate")
     public SqlSessionTemplate secondarySqlSessionTemplate(@Qualifier("secondarySqlSessionFactory") SqlSessionFactory sqlSessionFactory) {
         return new SqlSessionTemplate(sqlSessionFactory);
+    }
+
+    @Bean(name = "secondaryTransactionManager")
+    public PlatformTransactionManager secondaryTransactionManager(@Qualifier("dynamicDataSource") DataSource secondaryDataSource) {
+        return new DataSourceTransactionManager(secondaryDataSource);
     }
 }
 

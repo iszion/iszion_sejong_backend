@@ -56,11 +56,11 @@
                  WHEN da.PROG_ID is null AND db.PROG_ID is null AND du.PROG_ID is null    THEN 'N'
                  ELSE 'Y'
                 END    as      docYn
-        FROM db_izbook.XMENUTB a
-             left join db_izbook.XDOCATB da ON da.PROG_ID = a.PROG_ID
+        FROM db_b0main.XMENUTB a
+             left join db_b0main.XDOCATB da ON da.PROG_ID = a.PROG_ID
              left join XDOCBTB db ON db.PROG_ID = a.PROG_ID
              left join XDOCUTB du ON db.PROG_ID = a.PROG_ID
-             left join db_izbook.XGRNTPTB gp ON gp.COMP_CD = #{paramCompCd}  AND gp.PROG_ID = a.PROG_ID  AND gp.USER_ID = #{paramUserId}
+             left join db_b0main.XGRNTPTB gp ON gp.COMP_CD = #{paramCompCd}  AND gp.PROG_ID = a.PROG_ID  AND gp.USER_ID = #{paramUserId}
         WHERE 1=1
           AND a.LOCATION    =   #{ paramGroupCd }
           AND (#{paramUserId} = 'admin' OR (gp.SCR_YN = 'Y' OR a.MENU_PARENT = '#'))
@@ -110,7 +110,7 @@
              , a.VIEW_CNT           as  viewCnt
              , DATE_FORMAT(a.MAKE_DATE, '%Y-%m-%d %H:%i:%s') as makeDate
         FROM XBORDTB a
-            left outer join db_izbook.XCOMMTB as c ON c.COMM_CD = a.DEPT_CD
+            left outer join db_b0main.XCOMMTB as c ON c.COMM_CD = a.DEPT_CD
             , (SELECT @rownum :=0) AS tmp
         where a.DEPT_CD = #{ paramDeptCd }
         <if test='paramSearchValue != null and paramSearchValue != ""'>
@@ -132,7 +132,7 @@
              , DATE_FORMAT(b.MAKE_DATE, '%Y-%m-%d %H:%i:%s') as makeDate
         FROM   XBORDTB b
            -- 부서
-           left outer join db_izbook.XCOMMTB as c ON c.COMM_CD = b.dept_cd
+           left outer join db_b0main.XCOMMTB as c ON c.COMM_CD = b.dept_cd
 
         WHERE b.DEPT_CD = #{paramDeptCd } AND b.BOARD_NO = #{paramBoardNo }
     </select>
@@ -257,9 +257,9 @@
             , IF(g.USER_ID is null, 'I', 'U')  as  iuD
         FROM XUSERTB u
             left join XGRNTGTB g  ON g.USER_ID  = u.USER_ID
-            left join db_izbook.XCOMMTB  c1 ON c1.comm_cd = u.DEPT_CD
-            left join db_izbook.XCOMMTB  c2 ON c2.comm_cd = u.PSTN_CD
-            left join db_izbook.XCOMMTB  c3 ON c3.comm_cd = g.LEVEL_CD
+            left join db_b0main.XCOMMTB  c1 ON c1.comm_cd = u.DEPT_CD
+            left join db_b0main.XCOMMTB  c2 ON c2.comm_cd = u.PSTN_CD
+            left join db_b0main.XCOMMTB  c3 ON c3.comm_cd = g.LEVEL_CD
         WHERE u.USER_ID != 'admin'
           AND u.USE_YN = 'Y'
             <if test='paramDeptCd != null and paramDeptCd != ""'>
@@ -436,8 +436,8 @@
             , 'N'               as  targetYn
             , u.USER_ID         as  targetUserId
         FROM XUSERTB u
-            left join db_izbook.XCOMMTB c1 ON c1.COMM_CD = u.DEPT_CD
-            left join db_izbook.XCOMMTB c2 ON c2.COMM_CD = u.PSTN_CD
+            left join db_b0main.XCOMMTB c1 ON c1.COMM_CD = u.DEPT_CD
+            left join db_b0main.XCOMMTB c2 ON c2.COMM_CD = u.PSTN_CD
         WHERE u.USER_ID != 'admin'
           AND u.USE_YN = 'Y'
           AND u.USER_NM LIKE CONCAT( '%', #{paramSearchValue }, '%' )
@@ -757,7 +757,7 @@
              , a.TYPE                               as      header
              , CONCAT('/main/', LOWER(a.PROG_ID))   as      url
              , if(db.PROG_ID is null, 'N', 'Y')	    as      docYn
-        FROM db_izbook.XMENUTB a
+        FROM db_b0main.XMENUTB a
                  left join XDOCBTB db ON db.PROG_ID = a.PROG_ID
         WHERE 1=1
           AND a.LOCATION = #{ paramGroupCd }
@@ -827,7 +827,7 @@
              , CONCAT('/main/', LOWER(a.PROG_ID))   as      url
              , if(du.PROG_ID is null, 'N', 'Y')	    as      docYn
              , #{paramUserId}                       as      userid
-        FROM db_izbook.XMENUTB a
+        FROM db_b0main.XMENUTB a
                  left join XDOCUTB du ON du.PROG_ID = a.PROG_ID AND du.USER_ID = #{paramUserId}
         WHERE 1=1
           AND a.LOCATION = #{ paramGroupCd }

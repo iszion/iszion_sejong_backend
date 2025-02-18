@@ -15,6 +15,32 @@
     </select>
 
 
+    <select id="helpComp_list" resultType="java.util.HashMap">
+        SELECT
+          a.COMP_CD            as  compCd
+        , a.COMP_NM            as  compNm
+        , a.COMP_BUSIN_NM      as  compBusinNm
+        , a.COMP_BUSIN_NO      as  compBusinNo
+        , a.COMP_OWNER         as  compOwner
+        , a.OUT_DAY            as  outDay
+        FROM XCOMPTB a
+        WHERE 1=1
+        <if test='paramAll == "Y"'>
+            AND a.OUT_DAY <![CDATA[ > ]]>  #{paramOutDay }
+        </if>
+        <if test='paramAll == "N"'>
+            AND a.OUT_DAY <![CDATA[ <= ]]>  #{paramOutDay }
+        </if>
+        <if test='paramValue != null and paramValue != ""'>
+            AND (   a.COMP_NM LIKE CONCAT( '%', #{paramValue }, '%' )
+            OR  a.COMP_BUSIN_NM LIKE CONCAT( '%', #{paramValue }, '%')
+            OR  a.COMP_CD LIKE CONCAT( '%', #{paramValue }, '%')
+            OR  a.COMP_BUSIN_NO LIKE CONCAT( '%', #{paramValue }, '%')
+            )
+        </if>
+
+    </select>
+
 
     <!--    메뉴 그룹정보  list -->
     <select id="menu_main_list" resultType="java.util.HashMap">
@@ -411,6 +437,7 @@
              , u.USER_NM         as  userNm
              , u.USER_NMX        as  userNmx
              , u.COMP_CD         as  compCd
+             , xcp.COMP_NM       as  compNm
              , u.EMP_CD          as  empCd
              , u.DEPT_CD         as  deptCd
              , xc1.COMM_NM 		 as	 deptNm
@@ -430,6 +457,7 @@
              , u.UPDATE_DATE     as  updateDate
              , u.UPDATE_ID       as  updateId
         FROM XUSERTB u
+                 left join XCOMPTB xcp ON xcp.COMP_CD = u.COMP_CD
                  left join XCOMMTB xc1 ON xc1.COMM_CD = u.DEPT_CD
                  left join XCOMMTB xc2 ON xc2.COMM_CD = u.TITL_CD
         where u.USER_ID = #{ paramUserId }

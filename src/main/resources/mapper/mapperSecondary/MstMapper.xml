@@ -7,7 +7,7 @@
         SELECT
                a.COMM_CD            as  commCd
              , a.COMM_NM            as  commNm
-        FROM db_izbook.XCOMMTB a
+        FROM db_b0main.XCOMMTB a
         WHERE LEFT(a.COMM_CD,3) =   #{paramCommCd1}
           AND SUBSTRING(a.COMM_CD, 4,4) != '0000'
 
@@ -169,8 +169,8 @@
 
         FROM MPRODTB d
             left join MAGENTTB ag ON ag.AGENT_CD = d.AGENT_CD
-            left join db_izbook.XCOMMTB c1 ON c1.COMM_CD = d.PROD_DIV
-            left join db_izbook.XCOMMTB c2 ON c2.COMM_CD = d.PROD_FG
+            left join db_b0main.XCOMMTB c1 ON c1.COMM_CD = d.PROD_DIV
+            left join db_b0main.XCOMMTB c2 ON c2.COMM_CD = d.PROD_FG
 
         WHERE 1 = 1
         <if test='paramProdDiv != null and paramProdDiv != ""'>
@@ -238,8 +238,8 @@
 
         FROM MPRODTB d
              left join MAGENTTB ag ON ag.AGENT_CD = d.AGENT_CD
-             left join db_izbook.XCOMMTB c1 ON c1.COMM_CD = d.PROD_DIV
-             left join db_izbook.XCOMMTB c2 ON c2.COMM_CD = d.PROD_FG
+             left join db_b0main.XCOMMTB c1 ON c1.COMM_CD = d.PROD_DIV
+             left join db_b0main.XCOMMTB c2 ON c2.COMM_CD = d.PROD_FG
         WHERE d.PROD_CD     = 	#{paramProdCd}
 
     </select>
@@ -438,7 +438,7 @@
             , a.UPDATE_ID		as	updateId
 
         FROM MCUSTTB a
-            left join db_izbook.XCOMMTB c1 ON c1.COMM_CD = a.DIV_CD
+            left join db_b0main.XCOMMTB c1 ON c1.COMM_CD = a.DIV_CD
 
         WHERE 1 = 1
           AND a.USE_YN = #{paramUseYn }
@@ -506,7 +506,7 @@
             , 'U'               as  iuD
 
         FROM MCUSTTB a
-             left join db_izbook.XCOMMTB c1 ON c1.COMM_CD = a.DIV_CD
+             left join db_b0main.XCOMMTB c1 ON c1.COMM_CD = a.DIV_CD
         WHERE a.CUST_CD         = 	#{paramCustCd}
 
     </select>

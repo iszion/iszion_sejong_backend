@@ -104,7 +104,7 @@
              , u.USER_NM
              , u.PASSWD
              , u.ROLE
-             , xco.DATABASE
+             , CONCAT('db_b', xco.DATABASE) as DATABASE
         FROM XUSERTB u
                  left join XCOMPTB xco ON xco.COMP_CD = u.COMP_CD
         WHERE u.USER_ID = #{userId}

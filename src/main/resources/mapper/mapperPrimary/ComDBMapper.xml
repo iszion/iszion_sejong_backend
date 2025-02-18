@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.iszion.api.com.dao.ComDBDAO">
+
+    <update id="createTables">
+        CREATE TABLE IF NOT EXISTS ${dbName}.ProcedureLoges LIKE db_isbook.ProcedureLoges;
+
+        CREATE TABLE IF NOT EXISTS ${dbName}.MPRODTB    LIKE db_isbook.MPRODTB;
+        CREATE TABLE IF NOT EXISTS ${dbName}.MCUSTTB    LIKE db_isbook.MCUSTTB;
+        CREATE TABLE IF NOT EXISTS ${dbName}.MCUSTSTB   LIKE db_isbook.MCUSTSTB;
+        CREATE TABLE IF NOT EXISTS ${dbName}.MAGENTTB   LIKE db_isbook.MAGENTTB;
+
+        CREATE TABLE IF NOT EXISTS ${dbName}.SACCTB     LIKE db_isbook.SACCTB  ;
+        CREATE TABLE IF NOT EXISTS ${dbName}.SBILLTB    LIKE db_isbook.SBILLTB ;
+        CREATE TABLE IF NOT EXISTS ${dbName}.SBUYDTB    LIKE db_isbook.SBUYDTB ;
+        CREATE TABLE IF NOT EXISTS ${dbName}.SBUYHTB    LIKE db_isbook.SBUYHTB ;
+        CREATE TABLE IF NOT EXISTS ${dbName}.SDEALDTB   LIKE db_isbook.SDEALDTB;
+        CREATE TABLE IF NOT EXISTS ${dbName}.SDEALHTB   LIKE db_isbook.SDEALHTB;
+        CREATE TABLE IF NOT EXISTS ${dbName}.SFEESDTB   LIKE db_isbook.SFEESDTB;
+        CREATE TABLE IF NOT EXISTS ${dbName}.SFEESHTB   LIKE db_isbook.SFEESHTB;
+        CREATE TABLE IF NOT EXISTS ${dbName}.SFEESJTB   LIKE db_isbook.SFEESJTB;
+        CREATE TABLE IF NOT EXISTS ${dbName}.SFEESOTB   LIKE db_isbook.SFEESOTB;
+        CREATE TABLE IF NOT EXISTS ${dbName}.SFEESTTB   LIKE db_isbook.SFEESTTB;
+        CREATE TABLE IF NOT EXISTS ${dbName}.SFEESWTB   LIKE db_isbook.SFEESWTB;
+        CREATE TABLE IF NOT EXISTS ${dbName}.SSTOCKTB   LIKE db_isbook.SSTOCKTB;
+        CREATE TABLE IF NOT EXISTS ${dbName}.STSALETB   LIKE db_isbook.STSALETB;
+
+        CREATE TABLE IF NOT EXISTS ${dbName}.WCOSOTB    LIKE db_isbook.WCOSOTB ;
+        CREATE TABLE IF NOT EXISTS ${dbName}.WCOSQTB    LIKE db_isbook.WCOSQTB ;
+        CREATE TABLE IF NOT EXISTS ${dbName}.WCOSTTB    LIKE db_isbook.WCOSTTB ;
+
+        CREATE TABLE IF NOT EXISTS ${dbName}.XBORDTB    LIKE db_isbook.XBORDTB ;
+        CREATE TABLE IF NOT EXISTS ${dbName}.XDOCBTB    LIKE db_isbook.XDOCBTB ;
+        CREATE TABLE IF NOT EXISTS ${dbName}.XDOCUTB    LIKE db_isbook.XDOCUTB ;
+        CREATE TABLE IF NOT EXISTS ${dbName}.XEVENTTB   LIKE db_isbook.XEVENTTB;
+        CREATE TABLE IF NOT EXISTS ${dbName}.XMFAVTB    LIKE db_isbook.XMFAVTB ;
+    </update>
+
+</mapper>

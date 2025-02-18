@@ -128,7 +128,7 @@
         FROM SBUYDTB as id
             -- 거래처코드
              left outer join MPRODTB as pd ON pd.PROD_CD  = id.PROD_CD
-             left outer join db_izbook.XCOMMTB as c1 ON c1.COMM_CD  = id.BUY_FG
+             left outer join db_b0main.XCOMMTB as c1 ON c1.COMM_CD  = id.BUY_FG
 
         where 1=1
           AND id.BUY_DAY    =   #{paramBuyDay }
@@ -301,7 +301,7 @@
                  -- 거래처코드
                  left outer join MCUSTTB as cu ON cu.CUST_CD  = id.CUST_CD
                  left outer join MPRODTB as pd ON pd.PROD_CD  = id.PROD_CD
-                 left outer join db_izbook.XCOMMTB as c1 ON c1.COMM_CD  = id.BUY_FG
+                 left outer join db_b0main.XCOMMTB as c1 ON c1.COMM_CD  = id.BUY_FG
 
         where 1=1
           AND id.BUY_DAY  BETWEEN #{paramBuyDayFrom } AND  #{paramBuyDayTo }
@@ -484,7 +484,7 @@
         FROM SDEALDTB as d
                  -- 도서코드
                  left outer join MPRODTB as p  ON p.PROD_CD  = d.PROD_CD
-                 left outer join db_izbook.XCOMMTB as c1 ON c1.COMM_CD  = d.DEAL_FG
+                 left outer join db_b0main.XCOMMTB as c1 ON c1.COMM_CD  = d.DEAL_FG
 
         where 1=1
           AND d.DEAL_DAY   =   #{paramDealDay }
@@ -748,7 +748,7 @@
              -- header 체크
                  left outer join SDEALHTB as dh ON dh.DEAL_DAY = dd.DEAL_DAY AND dh.SEQ = dd.SEQ
             -- 공통코드 (401)
-                 left outer join db_izbook.XCOMMTB as c1 ON c1.COMM_CD = dd.DEAL_FG
+                 left outer join db_b0main.XCOMMTB as c1 ON c1.COMM_CD = dd.DEAL_FG
             -- 도서코드
                  left outer join MPRODTB as mp ON mp.PROD_CD  = dd.PROD_CD
 
@@ -798,7 +798,7 @@
             left outer join SDEALHTB as dh ON dh.DEAL_DAY  = dd.DEAL_DAY AND dh.SEQ = dd.SEQ
             left outer join MCUSTTB as mc ON mc.CUST_CD  = dh.CUST_CD
             left outer join MPRODTB as mp  ON mp.PROD_CD = dd.PROD_CD
-            left outer join db_izbook.XCOMMTB as c1 ON c1.COMM_CD  = dd.DEAL_FG
+            left outer join db_b0main.XCOMMTB as c1 ON c1.COMM_CD  = dd.DEAL_FG
 
         WHERE 1 = 1
             AND dd.DEAL_DAY   BETWEEN #{paramPeriodFrom } AND #{paramPeriodTo }
@@ -851,7 +851,7 @@
                  left outer join SDEALHTB as dh ON dh.DEAL_DAY  = dd.DEAL_DAY AND dh.SEQ = dd.SEQ
                  left outer join MCUSTTB as mc ON mc.CUST_CD  = dh.CUST_CD
                  left outer join MPRODTB as mp  ON mp.PROD_CD = dd.PROD_CD
-                 left outer join db_izbook.XCOMMTB as c1 ON c1.COMM_CD  = dd.DEAL_FG
+                 left outer join db_b0main.XCOMMTB as c1 ON c1.COMM_CD  = dd.DEAL_FG
 
         where 1=1
           AND dd.DEAL_DAY   BETWEEN #{paramPeriodFrom } AND #{paramPeriodTo }
@@ -913,7 +913,7 @@
             -- 도서코드
             left outer join MPRODTB mp  ON mp.PROD_CD	=	dd.PROD_CD
             -- 공통코드 (출고구분)
-            left outer join db_izbook.XCOMMTB as c1 ON c1.COMM_CD	=	dd.DEAL_FG
+            left outer join db_b0main.XCOMMTB as c1 ON c1.COMM_CD	=	dd.DEAL_FG
 
         WHERE dd.DIV_CD = '9'
           AND dd.DEAL_DAY   BETWEEN #{paramPeriodFrom } AND #{paramPeriodTo }
@@ -965,7 +965,7 @@
             -- 도서코드
             left outer join MPRODTB mp  ON mp.PROD_CD	=	dd.PROD_CD
             -- 공통코드 (출고구분)
-            left outer join db_izbook.XCOMMTB as c1 ON c1.COMM_CD	=	dd.DEAL_FG
+            left outer join db_b0main.XCOMMTB as c1 ON c1.COMM_CD	=	dd.DEAL_FG
 
 
         WHERE dd.DIV_CD = '9'
@@ -1764,7 +1764,7 @@
             -- 어음정보
             left outer join SBILLTB as bl ON bl.ACC_DAY  = ac.ACC_DAY AND bl.SEQ = ac.SEQ
             -- 공통코드(어음유형 1303)
-            left outer join db_izbook.XCOMMTB as c1 ON c1.COMM_CD = bl.DIV_CD
+            left outer join db_b0main.XCOMMTB as c1 ON c1.COMM_CD = bl.DIV_CD
 
         WHERE ac.ACC_DAY BETWEEN  #{paramPeriodFrom } AND #{paramPeriodTo }
             <if test='paramAccFg != null and paramAccFg != ""'>
@@ -1805,7 +1805,7 @@
             , bi.SEQ				as	seq
         FROM SBILLTB bi
             -- 어음유형 (공통코드 1303)
-            left outer join db_izbook.XCOMMTB as c1 ON c1.COMM_CD = bi.DIV_CD
+            left outer join db_b0main.XCOMMTB as c1 ON c1.COMM_CD = bi.DIV_CD
 
         WHERE 1=1
           AND bi.BILL_AMT	!=	0
@@ -2189,7 +2189,7 @@
                                 , dd.REMARKS          as  REMARKS
                                 FROM SDEALDTB dd
                                     left outer join MPRODTB as mp on mp.PROD_CD = dd.PROD_CD
-                                    left outer join db_izbook.XCOMMTB as c1 ON c1.COMM_CD = dd.DEAL_FG
+                                    left outer join db_b0main.XCOMMTB as c1 ON c1.COMM_CD = dd.DEAL_FG
 
                                 WHERE dd.CUST_CD        =   #{paramCustCd }
                                   AND dd.DEAL_DAY BETWEEN   #{paramPeriodFrom } AND #{paramPeriodTo }
@@ -2404,7 +2404,7 @@
                           FROM SBUYDTB bi
 
                               left outer join MCUSTTB as cu ON cu.CUST_CD = bi.CUST_CD
-                              left outer join db_izbook.XCOMMTB as c1 ON c1.COMM_CD = bi.BUY_FG
+                              left outer join db_b0main.XCOMMTB as c1 ON c1.COMM_CD = bi.BUY_FG
 
                           WHERE bi.PROD_CD =  #{paramProdCd }
                             AND bi.BUY_DAY   BETWEEN #{paramPeriodFrom } AND #{paramPeriodTo }
@@ -2433,7 +2433,7 @@
                           FROM SDEALDTB bo
 
                               left outer join MCUSTTB as cu ON cu.CUST_CD 	= 	bo.CUST_CD
-                              left outer join db_izbook.XCOMMTB as c1 ON c1.COMM_CD	= 	bo.DEAL_FG
+                              left outer join db_b0main.XCOMMTB as c1 ON c1.COMM_CD	= 	bo.DEAL_FG
 
                           WHERE bo.PROD_CD =  #{paramProdCd }
                             AND bo.DEAL_DAY   BETWEEN #{paramPeriodFrom } AND #{paramPeriodTo }
